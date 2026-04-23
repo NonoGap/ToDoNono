@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TodoList</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0e10;
+      --surface: #18181c;
+      --border: #2a2a30;
+      --text: #e8e8e0;
+      --muted: #5a5a68;
+      --accent: #c8f060;
+      --accent-dim: #9ab840;
+      --danger: #ff4f4f;
+      --imp1: #3a3a44;
+      --imp2: #4a5a2a;
+      --imp3: #7a8a30;
+      --imp4: #a8c040;
+      --imp5: #c8f060;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 16px 80px;
+    }
+
+    /* Noise texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.5;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 680px;
+      position: relative;
+      z-index: 1;
+    }
+
+    header {
+      margin-bottom: 40px;
+    }
+
+    .header-tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 6vw, 3.4rem);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      color: var(--text);
+    }
+
+    h1 span {
+      color: var(--accent);
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* Add form */
+    .add-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .task-input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      resize: none;
+      height: 48px;
+      line-height: 1.5;
+    }
+
+    .task-input:focus {
+      border-color: var(--accent);
+    }
+
+    .task-input::placeholder { color: var(--muted); }
+
+const firebaseConfig = {
+
+  apiKey: "AIzaSyDwO51jqYWFExbQIVh9iJR9hBauykrKCBI",
+
+  authDomain: "todol-2e669.firebaseapp.com",
+
+  projectId: "todol-2e669",
+
+  storageBucket: "todol-2e669.firebasestorage.app",
+
+  messagingSenderId: "345719979719",
+
+  appId: "1:345719979719:web:979e869ef1e7d9db8dc8e2"
+
+};
+
+    .char-count {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      text-align: right;
+      margin-top: -8px;
+    }
+
+    .char-count.warn { color: var(--danger); }
+
+    /* Importance selector */
+    .importance-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .importance-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+    }
+
+    .stars {
+      display: flex;
+      gap: 6px;
+    }
+
+    .star-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s, background 0.15s;
+      color: var(--muted);
+    }
+
+    .star-btn:hover { transform: scale(1.2); }
+    .star-btn.active { color: var(--accent); }
+
+    .add-btn {
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 8px;
+      padding: 0 24px;
+      height: 48px;
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    .add-btn:hover { background: var(--accent-dim); }
+    .add-btn:active { transform: scale(0.97); }
+    .add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Stats bar */
+    .stats {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      padding: 0 2px;
+    }
+
+    .stats-count { color: var(--accent); font-weight: 500; }
+
+    /* Todo list */
+    .todo-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .todo-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      animation: slideIn 0.25s ease;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .todo-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      border-radius: 10px 0 0 10px;
+    }
+
+    .todo-item[data-imp="1"]::before { background: var(--imp1); }
+    .todo-item[data-imp="2"]::before { background: var(--imp2); }
+    .todo-item[data-imp="3"]::before { background: var(--imp3); }
+    .todo-item[data-imp="4"]::before { background: var(--imp4); }
+    .todo-item[data-imp="5"]::before { background: var(--imp5); }
+
+    .todo-item:hover { border-color: #3a3a44; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .todo-text {
+      flex: 1;
+      font-size: 14px;
+      line-height: 1.5;
+      word-break: break-word;
+      color: var(--text);
+    }
+
+    /* Inline importance editor */
+    .imp-display {
+      display: flex;
+      gap: 3px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .imp-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.15s;
+    }
+
+    .imp-dot.filled { background: var(--accent); }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 16px;
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .delete-btn:hover { color: var(--danger); background: rgba(255,79,79,0.08); }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
+    .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+
+    .empty-state p {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      animation: pulse 1.5s ease infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+
+    /* Importance inline edit popup */
+    .imp-popup {
+      position: absolute;
+      right: 48px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      display: flex;
+      gap: 6px;
+      z-index: 10;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    .imp-popup-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 14px;
+      width: 26px;
+      height: 26px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'DM Mono', monospace;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .imp-popup-btn:hover, .imp-popup-btn.active {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      transition: transform 0.3s ease;
+      z-index: 100;
+      white-space: nowrap;
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* Config warning */
+    .config-warn {
+      background: rgba(255,79,79,0.08);
+      border: 1px solid rgba(255,79,79,0.3);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: #ff8080;
+      line-height: 1.7;
+    }
+
+    .config-warn code {
+      background: rgba(255,79,79,0.15);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="header-tag">// firebase todo</div>
+    <h1>Ma <span>liste</span></h1>
+    <div class="subtitle">Organisé. Priorisé. Stocké.</div>
+  </header>
+
+  <div id="config-warn" class="config-warn" style="display:none">
+    ⚠ Firebase non configuré — modifie la variable <code>firebaseConfig</code> dans <code>index.html</code> avec tes credentials.
+  </div>
+
+  <div class="add-form">
+    <div class="input-row">
+      <textarea
+        class="task-input"
+        id="taskInput"
+        placeholder="Nouvelle tâche…"
+        maxlength="250"
+        rows="1"
+      ></textarea>
+      <button class="add-btn" id="addBtn" onclick="addTask()">+ Ajouter</button>
+    </div>
+    <div class="char-count" id="charCount">0 / 250</div>
+    <div class="importance-row">
+      <span class="importance-label">Priorité</span>
+      <div class="stars" id="addStars"></div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <span id="statsText">— tâches</span>
+    <span>triées par priorité</span>
+  </div>
+
+  <div id="listContainer">
+    <div class="loading">chargement…</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getFirestore, collection, addDoc, deleteDoc, updateDoc,
+    doc, onSnapshot, query, orderBy, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // ─── 🔧 CONFIGURATION FIREBASE ───────────────────────────────────────────
+  // Remplace ces valeurs par celles de ta console Firebase
+  // (Project Settings > Your apps > Firebase SDK snippet > Config)
+  
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const isConfigured = !Object.values(firebaseConfig).some(v => v.startsWith("REPLACE_"));
+  if (!isConfigured) {
+    document.getElementById('config-warn').style.display = 'block';
+  }
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+  const col = collection(db, "todos");
+
+  // ── State ──────────────────────────────────────────────────────────────
+  let selectedImp = 3;
+
+  // ── Star selector (add form) ────────────────────────────────────────────
+  function renderAddStars(val) {
+    const container = document.getElementById('addStars');
+    container.innerHTML = '';
+    for (let i = 1; i <= 5; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'star-btn' + (i <= val ? ' active' : '');
+      btn.textContent = '●';
+      btn.title = `Priorité ${i}`;
+      btn.onclick = () => { selectedImp = i; renderAddStars(i); };
+      container.appendChild(btn);
+    }
+  }
+  renderAddStars(selectedImp);
+
+  // ── Char counter ────────────────────────────────────────────────────────
+  const taskInput = document.getElementById('taskInput');
+  const charCount = document.getElementById('charCount');
+  taskInput.addEventListener('input', () => {
+    const n = taskInput.value.length;
+    charCount.textContent = `${n} / 250`;
+    charCount.className = 'char-count' + (n > 220 ? ' warn' : '');
+  });
+
+  // ── Add task ────────────────────────────────────────────────────────────
+  window.addTask = async function() {
+    const text = taskInput.value.trim();
+    if (!text) return;
+    if (!isConfigured) { showToast('Configure Firebase d\'abord !'); return; }
+    const btn = document.getElementById('addBtn');
+    btn.disabled = true;
+    try {
+      await addDoc(col, {
+        text,
+        importance: selectedImp,
+        createdAt: serverTimestamp()
+      });
+      taskInput.value = '';
+      charCount.textContent = '0 / 250';
+      charCount.className = 'char-count';
+      selectedImp = 3;
+      renderAddStars(3);
+      showToast('Tâche ajoutée ✓');
+    } catch(e) {
+      showToast('Erreur : ' + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  // Enter key to submit
+  taskInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.addTask(); }
+  });
+
+  // ── Delete task ─────────────────────────────────────────────────────────
+  window.deleteTask = async function(id) {
+    await deleteDoc(doc(db, 'todos', id));
+    showToast('Tâche supprimée');
+  };
+
+  // ── Update importance ────────────────────────────────────────────────────
+  window.updateImportance = async function(id, val) {
+    await updateDoc(doc(db, 'todos', id), { importance: val });
+  };
+
+  // ── Realtime listener ────────────────────────────────────────────────────
+  const q = query(col, orderBy('importance', 'desc'), orderBy('createdAt', 'desc'));
+  onSnapshot(q, (snapshot) => {
+    const items = [];
+    snapshot.forEach(d => items.push({ id: d.id, ...d.data() }));
+    renderList(items);
+  }, (err) => {
+    document.getElementById('listContainer').innerHTML =
+      `<div class="config-warn">Erreur Firestore : ${err.message}<br>Vérifie ta configuration et les règles de sécurité Firestore.</div>`;
+  });
+
+  // ── Render list ──────────────────────────────────────────────────────────
+  function renderList(items) {
+    const container = document.getElementById('listContainer');
+    const statsText  = document.getElementById('statsText');
+
+    statsText.innerHTML = `<span class="stats-count">${items.length}</span> tâche${items.length !== 1 ? 's' : ''}`;
+
+    if (items.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">◎</div>
+          <p>Aucune tâche pour l'instant.<br>Ajoute quelque chose à faire !</p>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = '';
+    const list = document.createElement('div');
+    list.className = 'todo-list';
+
+    items.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'todo-item';
+      div.dataset.imp = item.importance || 1;
+      div.dataset.id = item.id;
+
+      // Dots indicator
+      let dots = '';
+      for (let i = 1; i <= 5; i++) {
+        dots += `<div class="imp-dot${i <= item.importance ? ' filled' : ''}"></div>`;
+      }
+
+      div.innerHTML = `
+        <span class="todo-text">${escHtml(item.text)}</span>
+        <div class="imp-display" title="Cliquer pour modifier la priorité" onclick="toggleImpPopup('${item.id}', ${item.importance}, this)">
+          ${dots}
+        </div>
+        <button class="delete-btn" onclick="deleteTask('${item.id}')" title="Supprimer">✕</button>
+      `;
+      list.appendChild(div);
+    });
+
+    container.appendChild(list);
+  }
+
+  // ── Importance popup ─────────────────────────────────────────────────────
+  let activePopup = null;
+
+  window.toggleImpPopup = function(id, current, el) {
+    if (activePopup) { activePopup.remove(); activePopup = null; return; }
+
+    const popup = document.createElement('div');
+    popup.className = 'imp-popup';
+
+    for (let i = 1; i <= 5; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'imp-popup-btn' + (i === current ? ' active' : '');
+      btn.textContent = i;
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        updateImportance(id, i);
+        popup.remove();
+        activePopup = null;
+      };
+      popup.appendChild(btn);
+    }
+
+    const item = el.closest('.todo-item');
+    item.style.position = 'relative';
+    item.appendChild(popup);
+    activePopup = popup;
+
+    setTimeout(() => document.addEventListener('click', closePopup, { once: true }), 0);
+  };
+
+  function closePopup() {
+    if (activePopup) { activePopup.remove(); activePopup = null; }
+  }
+
+  // ── Utils ────────────────────────────────────────────────────────────────
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  let toastTimer;
+  window.showToast = function(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+  };
+</script>
+</body>
+</html>

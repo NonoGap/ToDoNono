@@ -546,10 +546,11 @@
   };
 
   // ── Realtime listener ────────────────────────────────────────────────────
-  const q = query(col, orderBy('importance', 'desc'), orderBy('createdAt', 'desc'));
+  const q = query(col, orderBy('createdAt', 'desc'));
   onSnapshot(q, (snapshot) => {
     const items = [];
     snapshot.forEach(d => items.push({ id: d.id, ...d.data() }));
+    items.sort((a, b) => (b.importance || 0) - (a.importance || 0));
     renderList(items);
   }, (err) => {
     document.getElementById('listContainer').innerHTML =

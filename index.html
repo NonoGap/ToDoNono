@@ -619,12 +619,35 @@
     }
     .agenda-item[data-cat="enfants"]::before { background: #00aaff; }
     .agenda-item[data-cat="famille"]::before { background: #ff6600; }
-    .agenda-item[data-cat="moi"]::before     { background: #ff00aa; }
+    .agenda-item[data-cat="loisirs"]::before     { background: #ff00aa; }
     .agenda-item.done { opacity: 0.45; }
     .agenda-item.done .agenda-label { text-decoration: line-through; }
     .agenda-label { font-size: 14px; color: var(--text); font-weight: 600; }
     .agenda-datetime { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .agenda-day {
+      font-family: 'DM Mono', monospace;
+      font-size: 24px;
+      font-weight: 700;
+      min-width: 36px;
+      text-align: center;
+      flex-shrink: 0;
+      line-height: 1;
+    }
     .agenda-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); flex-shrink: 0; }
+    .show-all-btn {
+      width: 100%;
+      margin-top: 8px;
+      padding: 10px;
+      background: none;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .show-all-btn:hover { border-color: var(--accent); color: var(--accent); }
     .cat-selector { display: flex; gap: 8px; }
     .cat-btn {
       flex: 1;
@@ -640,7 +663,7 @@
     }
     .cat-btn.active-enfants { background: #00aaff; color: #fff; border-color: #00aaff; }
     .cat-btn.active-famille { background: #ff6600; color: #fff; border-color: #ff6600; }
-    .cat-btn.active-moi     { background: #ff00aa; color: #fff; border-color: #ff00aa; }
+    .cat-btn.active-loisirs     { background: #ff00aa; color: #fff; border-color: #ff00aa; }
 
     /* Config warning */
     .config-warn {
@@ -739,7 +762,7 @@
       <div class="cat-selector">
         <button class="cat-btn active-enfants" id="catEnfants" onclick="selectCat('enfants')">Enfants</button>
         <button class="cat-btn" id="catFamille" onclick="selectCat('famille')">Famille</button>
-        <button class="cat-btn" id="catMoi" onclick="selectCat('moi')">Moi</button>
+        <button class="cat-btn" id="catMoi" onclick="selectCat('loisirs')">Moi</button>
       </div>
       <button class="add-btn" onclick="addAgenda()" style="width:100%">+ Ajouter</button>
     </div>
@@ -961,8 +984,14 @@
     selectedCat = cat;
     document.getElementById('catEnfants').className = 'cat-btn' + (cat === 'enfants' ? ' active-enfants' : '');
     document.getElementById('catFamille').className = 'cat-btn' + (cat === 'famille' ? ' active-famille' : '');
-    document.getElementById('catMoi').className     = 'cat-btn' + (cat === 'moi'     ? ' active-moi'     : '');
+    document.getElementById('catMoi').className     = 'cat-btn' + (cat === 'loisirs'     ? ' active-loisirs'     : '');
   };
+
+  // Contraindre le sélecteur de date à 2026
+  const agendaDateInput = document.getElementById('agendaDate');
+  agendaDateInput.min = '2026-01-01';
+  agendaDateInput.max = '2026-12-31';
+  agendaDateInput.value = new Date().toISOString().slice(0, 10).replace(/^\d{4}/, '2026');
 
   window.addAgenda = async function() {
     const label = document.getElementById('agendaLabel').value.trim();
@@ -987,16 +1016,23 @@
     showToast('Événement supprimé');
   };
 
+  let agendaItems = [];
+  let showAllAgenda = false;
+
+  window.toggleAllAgenda = function() {
+    showAllAgenda = !showAllAgenda;
+    renderAgendaList(agendaItems);
+  };
+
   const aq = query(agendaCol, orderBy('date', 'asc'));
   onSnapshot(aq, (snapshot) => {
-    const items = [];
-    snapshot.forEach(d => items.push({ id: d.id, ...d.data() }));
-    items.sort((a, b) => {
-      if (a.done !== b.done) return a.done ? 1 : -1;
+    agendaItems = [];
+    snapshot.forEach(d => agendaItems.push({ id: d.id, ...d.data() }));
+    agendaItems.sort((a, b) => {
       if (a.date !== b.date) return a.date > b.date ? 1 : -1;
       return (a.time || '') > (b.time || '') ? 1 : -1;
     });
-    renderAgendaList(items);
+    renderAgendaList(agendaItems);
   });
 
   function renderAgendaList(items) {
@@ -1009,15 +1045,33 @@
         </div>`;
       return;
     }
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const maxDate = new Date(today); maxDate.setDate(today.getDate() + 6);
+    const todayStr   = today.toISOString().slice(0, 10);
+    const maxDateStr = maxDate.toISOString().slice(0, 10);
+
+    const visible = items.filter(i => i.date >= todayStr && i.date <= maxDateStr);
+    const others  = items.filter(i => i.date < todayStr || i.date > maxDateStr);
+    const toRender = showAllAgenda ? items : visible;
+
     container.innerHTML = '';
-    items.forEach(item => {
+
+    if (toRender.length === 0) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><p>Aucun événement cette semaine.</p></div>`;
+    }
+
+    const catColors = { enfants: '#00aaff', famille: '#ff6600', loisirs: '#ff00aa' };
+    toRender.forEach(item => {
       const div = document.createElement('div');
       div.className = 'agenda-item' + (item.done ? ' done' : '');
-      div.dataset.cat = item.category || 'autre';
-      const dateStr = item.date
-        ? new Date(item.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
-        : '';
+      div.dataset.cat = item.category || 'loisirs';
+      const color   = catColors[item.category] || '#888';
+      const dateObj = item.date ? new Date(item.date + 'T00:00:00') : null;
+      const dayNum  = dateObj ? dateObj.getDate() : '';
+      const dateStr = dateObj ? dateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : '';
       div.innerHTML = `
+        <div class="agenda-day" style="color:${color}">${dayNum}</div>
         <input type="checkbox" class="agenda-checkbox" ${item.done ? 'checked' : ''} onchange="toggleAgendaDone('${item.id}', ${item.done})">
         <div style="flex:1; min-width:0">
           <div class="agenda-label">${escHtml(item.label)}</div>
@@ -1027,6 +1081,16 @@
       `;
       container.appendChild(div);
     });
+
+    if (others.length > 0) {
+      const btn = document.createElement('button');
+      btn.className = 'show-all-btn';
+      btn.onclick = toggleAllAgenda;
+      btn.textContent = showAllAgenda
+        ? '↑ Réduire'
+        : `↓ Voir ${others.length} autre${others.length > 1 ? 's' : ''} événement${others.length > 1 ? 's' : ''}`;
+      container.appendChild(btn);
+    }
   }
 
   // ── Tab switching ─────────────────────────────────────────────────────────

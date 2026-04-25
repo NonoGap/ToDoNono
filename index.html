@@ -640,7 +640,7 @@
     .agenda-item[data-cat="loisirs"]::before     { background: #ff00aa; }
     .agenda-item.done { opacity: 0.45; }
     .agenda-item.done .agenda-label { text-decoration: line-through; }
-    .agenda-label { font-size: 14px; color: var(--text); font-weight: 600; }
+    .agenda-label { font-size: 14px; color: #888; font-weight: 600; }
     .agenda-datetime { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 3px; }
     .agenda-day {
       font-family: 'DM Mono', monospace;
@@ -652,6 +652,20 @@
       line-height: 1;
     }
     .agenda-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); flex-shrink: 0; }
+    .imp-toggle {
+      width: 100%;
+      padding: 9px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: none;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .imp-toggle.active { background: var(--danger); color: #fff; border-color: var(--danger); }
+    .agenda-important { color: var(--danger); font-weight: 800; font-size: 15px; margin-right: 4px; }
     .show-all-btn {
       width: 100%;
       margin-top: 8px;
@@ -785,6 +799,7 @@
         <button class="cat-btn" id="catFamille" onclick="selectCat('famille')">Famille</button>
         <button class="cat-btn" id="catMoi" onclick="selectCat('loisirs')">Moi</button>
       </div>
+      <button class="imp-toggle" id="importantToggle" onclick="toggleImportant()">! Important</button>
       <button class="add-btn" onclick="addAgenda()" style="width:100%">+ Ajouter</button>
     </div>
     <div id="agendaList"><div class="loading">chargement…</div></div>
@@ -1000,6 +1015,12 @@
   // ── Agenda ────────────────────────────────────────────────────────────────
   const agendaCol = collection(db, "agenda");
   let selectedCat = 'enfants';
+  let selectedImportant = false;
+
+  window.toggleImportant = function() {
+    selectedImportant = !selectedImportant;
+    document.getElementById('importantToggle').classList.toggle('active', selectedImportant);
+  };
 
   window.selectCat = function(cat) {
     selectedCat = cat;
@@ -1020,7 +1041,9 @@
     const time  = document.getElementById('agendaTime').value;
     if (!label || !date) return;
     try {
-      await addDoc(agendaCol, { label, date, time, category: selectedCat, done: false, createdAt: serverTimestamp() });
+      await addDoc(agendaCol, { label, date, time, category: selectedCat, important: selectedImportant, done: false, createdAt: serverTimestamp() });
+      selectedImportant = false;
+      document.getElementById('importantToggle').classList.remove('active');
       document.getElementById('agendaLabel').value = '';
       document.getElementById('agendaDate').value  = '';
       document.getElementById('agendaTime').value  = '';
@@ -1099,7 +1122,7 @@
         <div class="agenda-day" style="color:${color}">${dayNum}${monthStr ? `<span style="display:block;font-size:9px;font-weight:400;opacity:0.7">(${monthStr})</span>` : ''}${item.time ? `<span style="display:block;font-size:9px;font-weight:400;opacity:0.8">${item.time}</span>` : ''}</div>
         <input type="checkbox" class="agenda-checkbox" ${item.done ? 'checked' : ''} onchange="toggleAgendaDone('${item.id}', ${item.done})">
         <div style="flex:1; min-width:0">
-          <div class="agenda-label">${escHtml(item.label)}</div>
+          <div class="agenda-label">${item.important ? '<span class="agenda-important">!</span>' : ''}${escHtml(item.label)}</div>
         </div>
         <button class="delete-btn" onclick="deleteAgenda('${item.id}')" title="Supprimer">✕</button>
       `;

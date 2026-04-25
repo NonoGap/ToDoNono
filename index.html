@@ -429,6 +429,65 @@
     .close-btn:hover { background: rgba(0,0,0,0.25); transform: scale(1.1); }
     .close-btn:active { transform: scale(0.93); }
 
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 32px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 4px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 7px;
+      background: none;
+      color: var(--muted);
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      letter-spacing: 0.03em;
+    }
+    .tab-btn.active { background: var(--accent); color: var(--bg); }
+
+    /* Se régaler */
+    .regaler-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
+      animation: slideIn 0.25s ease;
+      position: relative;
+    }
+    .regaler-label {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 8px;
+      padding-right: 36px;
+    }
+    .regaler-photo {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      display: block;
+    }
+    .regaler-text-display {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+    .regaler-item .delete-btn { position: absolute; top: 10px; right: 10px; }
+
     /* Config warning */
     .config-warn {
       background: rgba(255,79,79,0.08);
@@ -454,11 +513,16 @@
 <button class="close-btn" onclick="window.close()" title="Fermer">✕</button>
 <div class="container">
   <header>
-    <div class="header-tag">// firebase todo</div>
-    <h1>Ma <span>liste</span></h1>
+<h1>Ma <span>liste</span></h1>
     <div class="subtitle"><span style="color:#87CEEB">Organisé</span>. <span style="color:#FF2020">Priorisé</span>. <span style="color:#90EE90">Bien-être</span>.</div>
   </header>
 
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('todo', this)">Tâches</button>
+    <button class="tab-btn" onclick="switchTab('regaler', this)">Se régaler</button>
+  </div>
+
+  <div id="tab-todo" class="tab-content">
   <div id="config-warn" class="config-warn" style="display:none">
     ⚠ Firebase non configuré — modifie la variable <code>firebaseConfig</code> dans <code>index.html</code> avec tes credentials.
   </div>
@@ -488,6 +552,17 @@
 
   <div id="listContainer">
     <div class="loading">chargement…</div>
+  </div>
+  </div>
+
+  <div id="tab-regaler" class="tab-content" style="display:none">
+    <div class="add-form">
+      <input type="text" class="task-input" id="regalerLabel" placeholder="Nom du plat…" style="height:48px; resize:none">
+      <input type="text" class="task-input" id="regalerPhoto" placeholder="URL de la photo (optionnel)…" style="height:48px; resize:none">
+      <textarea class="task-input" id="regalerText" placeholder="Notes, recette, ingrédients…" style="height:80px; resize:vertical"></textarea>
+      <button class="add-btn" onclick="addRegaler()" style="width:100%">+ Ajouter</button>
+    </div>
+    <div id="regalerList"><div class="loading">chargement…</div></div>
   </div>
 </div>
 
@@ -696,6 +771,69 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
   };
+
+  // ── Tab switching ─────────────────────────────────────────────────────────
+  window.switchTab = function(tab, btn) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + tab).style.display = 'block';
+    btn.classList.add('active');
+  };
+
+  // ── Se régaler ────────────────────────────────────────────────────────────
+  const regalerCol = collection(db, "regaler");
+
+  window.addRegaler = async function() {
+    const label = document.getElementById('regalerLabel').value.trim();
+    const photo = document.getElementById('regalerPhoto').value.trim();
+    const text  = document.getElementById('regalerText').value.trim();
+    if (!label) return;
+    try {
+      await addDoc(regalerCol, { label, photo, text, createdAt: serverTimestamp() });
+      document.getElementById('regalerLabel').value = '';
+      document.getElementById('regalerPhoto').value = '';
+      document.getElementById('regalerText').value = '';
+      showToast('Plat ajouté ✓');
+    } catch(e) {
+      showToast('Erreur : ' + e.message);
+    }
+  };
+
+  window.deleteRegaler = async function(id) {
+    await deleteDoc(doc(db, 'regaler', id));
+    showToast('Plat supprimé');
+  };
+
+  const rq = query(regalerCol, orderBy('createdAt', 'desc'));
+  onSnapshot(rq, (snapshot) => {
+    const items = [];
+    snapshot.forEach(d => items.push({ id: d.id, ...d.data() }));
+    renderRegalerList(items);
+  });
+
+  function renderRegalerList(items) {
+    const container = document.getElementById('regalerList');
+    if (items.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🍽</div>
+          <p>Aucun plat pour l'instant.<br>Ajoute quelque chose à déguster !</p>
+        </div>`;
+      return;
+    }
+    container.innerHTML = '';
+    items.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'regaler-item';
+      div.innerHTML = `
+        <div class="regaler-label">${escHtml(item.label)}</div>
+        ${item.photo ? `<img class="regaler-photo" src="${escHtml(item.photo)}" alt="${escHtml(item.label)}" onerror="this.style.display='none'">` : ''}
+        ${item.text ? `<div class="regaler-text-display">${escHtml(item.text)}</div>` : ''}
+        <button class="delete-btn" onclick="deleteRegaler('${item.id}')" title="Supprimer">✕</button>
+      `;
+      container.appendChild(div);
+    });
+  }
 </script>
 </body>
 </html>

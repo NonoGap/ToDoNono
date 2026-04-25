@@ -1055,6 +1055,7 @@
   };
 
   window.deleteAgenda = async function(id) {
+    if (!confirm('Supprimer cet événement ?')) return;
     await deleteDoc(doc(db, 'agenda', id));
     showToast('Événement supprimé');
   };

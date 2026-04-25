@@ -389,10 +389,10 @@
     /* Close button */
     .refresh-btn {
       position: fixed;
-      top: 16px;
+      top: 12px;
       right: 90px;
-      width: 36px;
-      height: 36px;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
       background: rgba(0,0,0,0.15);
       border: none;
@@ -487,6 +487,30 @@
       white-space: pre-wrap;
     }
     .regaler-item .delete-btn { position: absolute; top: 10px; right: 10px; }
+    .photo-input-label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      cursor: pointer;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      transition: border-color 0.2s;
+    }
+    .photo-input-label:hover { border-color: var(--accent); }
+    #regalerPhoto { display: none; }
+    .photo-preview {
+      width: 48px;
+      height: 48px;
+      object-fit: cover;
+      border-radius: 6px;
+      display: none;
+      flex-shrink: 0;
+    }
 
     /* Config warning */
     .config-warn {
@@ -558,7 +582,11 @@
   <div id="tab-regaler" class="tab-content" style="display:none">
     <div class="add-form">
       <input type="text" class="task-input" id="regalerLabel" placeholder="Nom du plat…" style="height:48px; resize:none">
-      <input type="text" class="task-input" id="regalerPhoto" placeholder="URL de la photo (optionnel)…" style="height:48px; resize:none">
+      <label class="photo-input-label" for="regalerPhoto">
+        <img id="regalerPhotoPreview" class="photo-preview">
+        <span id="regalerPhotoLabel">📷 Choisir une photo…</span>
+      </label>
+      <input type="file" id="regalerPhoto" accept="image/*">
       <textarea class="task-input" id="regalerText" placeholder="Notes, recette, ingrédients…" style="height:80px; resize:vertical"></textarea>
       <button class="add-btn" onclick="addRegaler()" style="width:100%">+ Ajouter</button>
     </div>
@@ -783,15 +811,49 @@
   // ── Se régaler ────────────────────────────────────────────────────────────
   const regalerCol = collection(db, "regaler");
 
+  function resizeImage(file, maxSize = 800, quality = 0.75) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let w = img.width, h = img.height;
+          if (w > h) { if (w > maxSize) { h = h * maxSize / w; w = maxSize; } }
+          else        { if (h > maxSize) { w = w * maxSize / h; h = maxSize; } }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  document.getElementById('regalerPhoto').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const base64 = await resizeImage(file);
+    const preview = document.getElementById('regalerPhotoPreview');
+    preview.src = base64;
+    preview.style.display = 'block';
+    document.getElementById('regalerPhotoLabel').textContent = '✓ ' + file.name;
+  });
+
   window.addRegaler = async function() {
-    const label = document.getElementById('regalerLabel').value.trim();
-    const photo = document.getElementById('regalerPhoto').value.trim();
-    const text  = document.getElementById('regalerText').value.trim();
+    const label     = document.getElementById('regalerLabel').value.trim();
+    const text      = document.getElementById('regalerText').value.trim();
+    const fileInput = document.getElementById('regalerPhoto');
     if (!label) return;
+    let photo = '';
+    if (fileInput.files[0]) photo = await resizeImage(fileInput.files[0]);
     try {
       await addDoc(regalerCol, { label, photo, text, createdAt: serverTimestamp() });
       document.getElementById('regalerLabel').value = '';
-      document.getElementById('regalerPhoto').value = '';
+      fileInput.value = '';
+      document.getElementById('regalerPhotoPreview').style.display = 'none';
+      document.getElementById('regalerPhotoLabel').textContent = '📷 Choisir une photo…';
       document.getElementById('regalerText').value = '';
       showToast('Plat ajouté ✓');
     } catch(e) {

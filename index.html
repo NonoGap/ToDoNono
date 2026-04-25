@@ -429,6 +429,24 @@
     .close-btn:hover { background: rgba(0,0,0,0.25); transform: scale(1.1); }
     .close-btn:active { transform: scale(0.93); }
 
+    /* Form toggle */
+    .form-toggle-btn {
+      width: 100%;
+      padding: 10px 16px;
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      margin-bottom: 12px;
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+    .form-toggle-btn:hover { border-color: var(--accent); color: var(--text); }
+
     /* Tabs */
     .tabs {
       display: flex;
@@ -623,7 +641,7 @@
     .agenda-item.done { opacity: 0.45; }
     .agenda-item.done .agenda-label { text-decoration: line-through; }
     .agenda-label { font-size: 14px; color: var(--text); font-weight: 600; }
-    .agenda-datetime { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .agenda-datetime { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 3px; }
     .agenda-day {
       font-family: 'DM Mono', monospace;
       font-size: 24px;
@@ -701,11 +719,12 @@
   </div>
 
   <div id="tab-todo" class="tab-content">
+  <button class="form-toggle-btn" data-label="＋ Nouvelle tâche" onclick="toggleForm('form-todo', this)">＋ Nouvelle tâche</button>
   <div id="config-warn" class="config-warn" style="display:none">
     ⚠ Firebase non configuré — modifie la variable <code>firebaseConfig</code> dans <code>index.html</code> avec tes credentials.
   </div>
 
-  <div class="add-form">
+  <div class="add-form" id="form-todo" style="display:none">
     <div class="input-row">
       <textarea
         class="task-input"
@@ -734,7 +753,8 @@
   </div>
 
   <div id="tab-regaler" class="tab-content" style="display:none">
-    <div class="add-form">
+    <button class="form-toggle-btn" data-label="＋ Nouveau plat" onclick="toggleForm('form-regaler', this)">＋ Nouveau plat</button>
+    <div class="add-form" id="form-regaler" style="display:none">
       <input type="text" class="task-input" id="regalerLabel" placeholder="Nom du plat…" style="height:48px; resize:none">
       <label class="photo-input-label" for="regalerPhoto">
         <img id="regalerPhotoPreview" class="photo-preview">
@@ -748,12 +768,13 @@
   </div>
 
   <div id="tab-agenda" class="tab-content" style="display:none">
+    <button class="form-toggle-btn" data-label="＋ Nouvel événement" onclick="toggleForm('form-agenda', this)">＋ Nouvel événement</button>
     <div class="agenda-legend">
       <span><span class="legend-dot" style="background:#3b82f6"></span>Enfants</span>
       <span><span class="legend-dot" style="background:#ff6600"></span>Famille</span>
       <span><span class="legend-dot" style="background:#ff00aa"></span>Moi</span>
     </div>
-    <div class="add-form">
+    <div class="add-form" id="form-agenda" style="display:none">
       <input type="text" class="task-input" id="agendaLabel" placeholder="Libellé…" style="height:48px; resize:none">
       <div style="display:flex; gap:10px">
         <input type="date" class="task-input" id="agendaDate" style="height:48px; flex:1">
@@ -1067,15 +1088,18 @@
       div.className = 'agenda-item' + (item.done ? ' done' : '');
       div.dataset.cat = item.category || 'loisirs';
       const color   = catColors[item.category] || '#888';
-      const dateObj = item.date ? new Date(item.date + 'T00:00:00') : null;
-      const dayNum  = dateObj ? dateObj.getDate() : '';
-      const dateStr = dateObj ? dateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : '';
+      const dateObj  = item.date ? new Date(item.date + 'T00:00:00') : null;
+      const dayNum   = dateObj ? dateObj.getDate() : '';
+      const dayNames = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+      const dayAbbr  = dateObj ? dayNames[dateObj.getDay()] : '';
+      const dateStr  = dateObj ? dayAbbr + ' ' + dateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : '';
+      const isDistant = item.date < todayStr || item.date > maxDateStr;
+      const monthStr  = isDistant && dateObj ? dateObj.toLocaleDateString('fr-FR', { month: 'short' }) : '';
       div.innerHTML = `
-        <div class="agenda-day" style="color:${color}">${dayNum}</div>
+        <div class="agenda-day" style="color:${color}">${dayNum}${monthStr ? `<span style="display:block;font-size:9px;font-weight:400;opacity:0.7">(${monthStr})</span>` : ''}${item.time ? `<span style="display:block;font-size:9px;font-weight:400;opacity:0.8">${item.time}</span>` : ''}</div>
         <input type="checkbox" class="agenda-checkbox" ${item.done ? 'checked' : ''} onchange="toggleAgendaDone('${item.id}', ${item.done})">
         <div style="flex:1; min-width:0">
           <div class="agenda-label">${escHtml(item.label)}</div>
-          <div class="agenda-datetime">${dateStr}${item.time ? ' · ' + item.time : ''}</div>
         </div>
         <button class="delete-btn" onclick="deleteAgenda('${item.id}')" title="Supprimer">✕</button>
       `;
@@ -1092,6 +1116,14 @@
       container.appendChild(btn);
     }
   }
+
+  // ── Form toggle ───────────────────────────────────────────────────────────
+  window.toggleForm = function(formId, btn) {
+    const form = document.getElementById(formId);
+    const isHidden = form.style.display === 'none';
+    form.style.display = isHidden ? '' : 'none';
+    btn.textContent = isHidden ? '↑ Masquer' : btn.dataset.label;
+  };
 
   // ── Tab switching ─────────────────────────────────────────────────────────
   window.switchTab = function(tab, btn) {

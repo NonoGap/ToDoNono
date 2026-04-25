@@ -617,8 +617,9 @@
       width: 3px;
       border-radius: 10px 0 0 10px;
     }
-    .agenda-item[data-cat="enfants"]::before { background: #3b82f6; }
-    .agenda-item[data-cat="autre"]::before   { background: #22c55e; }
+    .agenda-item[data-cat="enfants"]::before { background: #00aaff; }
+    .agenda-item[data-cat="famille"]::before { background: #ff6600; }
+    .agenda-item[data-cat="moi"]::before     { background: #ff00aa; }
     .agenda-item.done { opacity: 0.45; }
     .agenda-item.done .agenda-label { text-decoration: line-through; }
     .agenda-label { font-size: 14px; color: var(--text); font-weight: 600; }
@@ -637,8 +638,9 @@
       cursor: pointer;
       transition: all 0.2s;
     }
-    .cat-btn.active-enfants { background: #3b82f6; color: #fff; border-color: #3b82f6; }
-    .cat-btn.active-autre   { background: #22c55e; color: #fff; border-color: #22c55e; }
+    .cat-btn.active-enfants { background: #00aaff; color: #fff; border-color: #00aaff; }
+    .cat-btn.active-famille { background: #ff6600; color: #fff; border-color: #ff6600; }
+    .cat-btn.active-moi     { background: #ff00aa; color: #fff; border-color: #ff00aa; }
 
     /* Config warning */
     .config-warn {
@@ -725,7 +727,8 @@
   <div id="tab-agenda" class="tab-content" style="display:none">
     <div class="agenda-legend">
       <span><span class="legend-dot" style="background:#3b82f6"></span>Enfants</span>
-      <span><span class="legend-dot" style="background:#22c55e"></span>Autre</span>
+      <span><span class="legend-dot" style="background:#ff6600"></span>Famille</span>
+      <span><span class="legend-dot" style="background:#ff00aa"></span>Moi</span>
     </div>
     <div class="add-form">
       <input type="text" class="task-input" id="agendaLabel" placeholder="Libellé…" style="height:48px; resize:none">
@@ -735,7 +738,8 @@
       </div>
       <div class="cat-selector">
         <button class="cat-btn active-enfants" id="catEnfants" onclick="selectCat('enfants')">Enfants</button>
-        <button class="cat-btn" id="catAutre" onclick="selectCat('autre')">Autre</button>
+        <button class="cat-btn" id="catFamille" onclick="selectCat('famille')">Famille</button>
+        <button class="cat-btn" id="catMoi" onclick="selectCat('moi')">Moi</button>
       </div>
       <button class="add-btn" onclick="addAgenda()" style="width:100%">+ Ajouter</button>
     </div>
@@ -956,7 +960,8 @@
   window.selectCat = function(cat) {
     selectedCat = cat;
     document.getElementById('catEnfants').className = 'cat-btn' + (cat === 'enfants' ? ' active-enfants' : '');
-    document.getElementById('catAutre').className   = 'cat-btn' + (cat === 'autre'   ? ' active-autre'   : '');
+    document.getElementById('catFamille').className = 'cat-btn' + (cat === 'famille' ? ' active-famille' : '');
+    document.getElementById('catMoi').className     = 'cat-btn' + (cat === 'moi'     ? ' active-moi'     : '');
   };
 
   window.addAgenda = async function() {
@@ -1120,7 +1125,9 @@
       div.className = 'regaler-item';
       if (item.pinned) div.classList.add('pinned-item');
       div.innerHTML = `
-        <div class="regaler-label">${escHtml(item.label)}</div>
+        <div id="rlabel-${item.id}">
+          <div class="regaler-label">${escHtml(item.label)}<button class="regaler-edit-btn" onclick="editRegalerLabel('${item.id}')" title="Modifier le titre" style="margin-left:6px">✏</button></div>
+        </div>
         ${item.photo ? `<img class="regaler-photo" src="${escHtml(item.photo)}" alt="${escHtml(item.label)}" onerror="this.style.display='none'">` : ''}
         <div id="rtext-${item.id}">
           ${item.text ? `<span class="regaler-text-display">${escHtml(item.text)}</span>` : ''}
@@ -1132,6 +1139,35 @@
       container.appendChild(div);
     });
   }
+
+  window.editRegalerLabel = function(id) {
+    const wrapper = document.getElementById('rlabel-' + id);
+    const currentLabel = wrapper.querySelector('.regaler-label')?.childNodes[0]?.textContent?.trim() || '';
+    wrapper.innerHTML = `
+      <div class="regaler-inline-edit">
+        <input type="text" id="redit-label-${id}" class="task-input" value="${escHtml(currentLabel)}" style="height:40px">
+        <div class="regaler-inline-actions">
+          <button class="regaler-save-btn" onclick="saveRegalerLabel('${id}')">✓ Enregistrer</button>
+          <button class="regaler-cancel-btn" onclick="cancelRegalerLabel('${id}')">Annuler</button>
+        </div>
+      </div>
+    `;
+    const input = document.getElementById('redit-label-' + id);
+    input.focus(); input.select();
+  };
+
+  window.saveRegalerLabel = async function(id) {
+    const newLabel = document.getElementById('redit-label-' + id)?.value.trim() || '';
+    if (!newLabel) return;
+    await updateDoc(doc(db, 'regaler', id), { label: newLabel });
+  };
+
+  window.cancelRegalerLabel = function(id) {
+    const item = regalerItems.find(i => i.id === id);
+    if (!item) return;
+    const wrapper = document.getElementById('rlabel-' + id);
+    wrapper.innerHTML = `<div class="regaler-label">${escHtml(item.label)}<button class="regaler-edit-btn" onclick="editRegalerLabel('${id}')" title="Modifier le titre" style="margin-left:6px">✏</button></div>`;
+  };
 
   window.editRegalerText = function(id) {
     const wrapper = document.getElementById('rtext-' + id);

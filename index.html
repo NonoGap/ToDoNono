@@ -470,8 +470,28 @@
       font-weight: 600;
       color: var(--text);
       margin-bottom: 8px;
-      padding-right: 36px;
+      padding-right: 72px;
     }
+    .pin-btn {
+      position: absolute;
+      top: 10px;
+      right: 44px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+      opacity: 0.25;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.2s, background 0.2s;
+    }
+    .pin-btn:hover { opacity: 0.6; background: rgba(200,240,96,0.1); }
+    .pin-btn.pinned { opacity: 1; }
+    .regaler-item.pinned-item { border-color: var(--accent); }
     .regaler-photo {
       width: 100%;
       max-height: 200px;
@@ -485,6 +505,53 @@
       color: var(--muted);
       line-height: 1.5;
       white-space: pre-wrap;
+    }
+    .regaler-edit-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .regaler-edit-btn:hover { color: var(--accent); }
+    .regaler-inline-edit { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+    .regaler-inline-edit textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      resize: vertical;
+      min-height: 60px;
+      outline: none;
+    }
+    .regaler-inline-actions { display: flex; gap: 6px; }
+    .regaler-save-btn {
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-family: 'Syne', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .regaler-cancel-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 14px;
+      color: var(--muted);
+      font-family: 'Syne', sans-serif;
+      font-size: 12px;
+      cursor: pointer;
     }
     .regaler-item .delete-btn { position: absolute; top: 10px; right: 10px; }
     .photo-input-label {
@@ -511,6 +578,67 @@
       display: none;
       flex-shrink: 0;
     }
+
+    /* Agenda */
+    .agenda-legend {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      margin-bottom: 20px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .legend-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+    .agenda-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      animation: slideIn 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .agenda-item::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      border-radius: 10px 0 0 10px;
+    }
+    .agenda-item[data-cat="enfants"]::before { background: #3b82f6; }
+    .agenda-item[data-cat="autre"]::before   { background: #22c55e; }
+    .agenda-item.done { opacity: 0.45; }
+    .agenda-item.done .agenda-label { text-decoration: line-through; }
+    .agenda-label { font-size: 14px; color: var(--text); font-weight: 600; }
+    .agenda-datetime { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .agenda-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); flex-shrink: 0; }
+    .cat-selector { display: flex; gap: 8px; }
+    .cat-btn {
+      flex: 1;
+      padding: 9px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: none;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .cat-btn.active-enfants { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+    .cat-btn.active-autre   { background: #22c55e; color: #fff; border-color: #22c55e; }
 
     /* Config warning */
     .config-warn {
@@ -544,6 +672,7 @@
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('todo', this)">Tâches</button>
     <button class="tab-btn" onclick="switchTab('regaler', this)">Se régaler</button>
+    <button class="tab-btn" onclick="switchTab('agenda', this)">Agenda</button>
   </div>
 
   <div id="tab-todo" class="tab-content">
@@ -591,6 +720,26 @@
       <button class="add-btn" onclick="addRegaler()" style="width:100%">+ Ajouter</button>
     </div>
     <div id="regalerList"><div class="loading">chargement…</div></div>
+  </div>
+
+  <div id="tab-agenda" class="tab-content" style="display:none">
+    <div class="agenda-legend">
+      <span><span class="legend-dot" style="background:#3b82f6"></span>Enfants</span>
+      <span><span class="legend-dot" style="background:#22c55e"></span>Autre</span>
+    </div>
+    <div class="add-form">
+      <input type="text" class="task-input" id="agendaLabel" placeholder="Libellé…" style="height:48px; resize:none">
+      <div style="display:flex; gap:10px">
+        <input type="date" class="task-input" id="agendaDate" style="height:48px; flex:1">
+        <input type="time" class="task-input" id="agendaTime" style="height:48px; flex:1">
+      </div>
+      <div class="cat-selector">
+        <button class="cat-btn active-enfants" id="catEnfants" onclick="selectCat('enfants')">Enfants</button>
+        <button class="cat-btn" id="catAutre" onclick="selectCat('autre')">Autre</button>
+      </div>
+      <button class="add-btn" onclick="addAgenda()" style="width:100%">+ Ajouter</button>
+    </div>
+    <div id="agendaList"><div class="loading">chargement…</div></div>
   </div>
 </div>
 
@@ -800,6 +949,81 @@
     toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
   };
 
+  // ── Agenda ────────────────────────────────────────────────────────────────
+  const agendaCol = collection(db, "agenda");
+  let selectedCat = 'enfants';
+
+  window.selectCat = function(cat) {
+    selectedCat = cat;
+    document.getElementById('catEnfants').className = 'cat-btn' + (cat === 'enfants' ? ' active-enfants' : '');
+    document.getElementById('catAutre').className   = 'cat-btn' + (cat === 'autre'   ? ' active-autre'   : '');
+  };
+
+  window.addAgenda = async function() {
+    const label = document.getElementById('agendaLabel').value.trim();
+    const date  = document.getElementById('agendaDate').value;
+    const time  = document.getElementById('agendaTime').value;
+    if (!label || !date) return;
+    try {
+      await addDoc(agendaCol, { label, date, time, category: selectedCat, done: false, createdAt: serverTimestamp() });
+      document.getElementById('agendaLabel').value = '';
+      document.getElementById('agendaDate').value  = '';
+      document.getElementById('agendaTime').value  = '';
+      showToast('Événement ajouté ✓');
+    } catch(e) { showToast('Erreur : ' + e.message); }
+  };
+
+  window.toggleAgendaDone = async function(id, done) {
+    await updateDoc(doc(db, 'agenda', id), { done: !done });
+  };
+
+  window.deleteAgenda = async function(id) {
+    await deleteDoc(doc(db, 'agenda', id));
+    showToast('Événement supprimé');
+  };
+
+  const aq = query(agendaCol, orderBy('date', 'asc'));
+  onSnapshot(aq, (snapshot) => {
+    const items = [];
+    snapshot.forEach(d => items.push({ id: d.id, ...d.data() }));
+    items.sort((a, b) => {
+      if (a.done !== b.done) return a.done ? 1 : -1;
+      if (a.date !== b.date) return a.date > b.date ? 1 : -1;
+      return (a.time || '') > (b.time || '') ? 1 : -1;
+    });
+    renderAgendaList(items);
+  });
+
+  function renderAgendaList(items) {
+    const container = document.getElementById('agendaList');
+    if (items.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📅</div>
+          <p>Aucun événement.<br>Ajoute quelque chose à l'agenda !</p>
+        </div>`;
+      return;
+    }
+    container.innerHTML = '';
+    items.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'agenda-item' + (item.done ? ' done' : '');
+      div.dataset.cat = item.category || 'autre';
+      const dateStr = item.date
+        ? new Date(item.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+        : '';
+      div.innerHTML = `
+        <input type="checkbox" class="agenda-checkbox" ${item.done ? 'checked' : ''} onchange="toggleAgendaDone('${item.id}', ${item.done})">
+        <div style="flex:1; min-width:0">
+          <div class="agenda-label">${escHtml(item.label)}</div>
+          <div class="agenda-datetime">${dateStr}${item.time ? ' · ' + item.time : ''}</div>
+        </div>
+        <button class="delete-btn" onclick="deleteAgenda('${item.id}')" title="Supprimer">✕</button>
+      `;
+      container.appendChild(div);
+    });
+  }
+
   // ── Tab switching ─────────────────────────────────────────────────────────
   window.switchTab = function(tab, btn) {
     document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
@@ -861,16 +1085,23 @@
     }
   };
 
+  window.togglePin = async function(id, pinned) {
+    await updateDoc(doc(db, 'regaler', id), { pinned: !pinned });
+  };
+
   window.deleteRegaler = async function(id) {
     await deleteDoc(doc(db, 'regaler', id));
     showToast('Plat supprimé');
   };
 
+  let regalerItems = [];
+
   const rq = query(regalerCol, orderBy('createdAt', 'desc'));
   onSnapshot(rq, (snapshot) => {
-    const items = [];
-    snapshot.forEach(d => items.push({ id: d.id, ...d.data() }));
-    renderRegalerList(items);
+    regalerItems = [];
+    snapshot.forEach(d => regalerItems.push({ id: d.id, ...d.data() }));
+    regalerItems.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+    renderRegalerList(regalerItems);
   });
 
   function renderRegalerList(items) {
@@ -887,15 +1118,50 @@
     items.forEach(item => {
       const div = document.createElement('div');
       div.className = 'regaler-item';
+      if (item.pinned) div.classList.add('pinned-item');
       div.innerHTML = `
         <div class="regaler-label">${escHtml(item.label)}</div>
         ${item.photo ? `<img class="regaler-photo" src="${escHtml(item.photo)}" alt="${escHtml(item.label)}" onerror="this.style.display='none'">` : ''}
-        ${item.text ? `<div class="regaler-text-display">${escHtml(item.text)}</div>` : ''}
+        <div id="rtext-${item.id}">
+          ${item.text ? `<span class="regaler-text-display">${escHtml(item.text)}</span>` : ''}
+          <button class="regaler-edit-btn" onclick="editRegalerText('${item.id}')" title="Modifier">✏</button>
+        </div>
+        <button class="pin-btn ${item.pinned ? 'pinned' : ''}" onclick="togglePin('${item.id}', ${!!item.pinned})" title="${item.pinned ? 'Désépingler' : 'Épingler'}">📌</button>
         <button class="delete-btn" onclick="deleteRegaler('${item.id}')" title="Supprimer">✕</button>
       `;
       container.appendChild(div);
     });
   }
+
+  window.editRegalerText = function(id) {
+    const wrapper = document.getElementById('rtext-' + id);
+    const currentText = wrapper.querySelector('.regaler-text-display')?.textContent?.trim() || '';
+    wrapper.innerHTML = `
+      <div class="regaler-inline-edit">
+        <textarea id="redit-${id}" placeholder="Notes, recette, ingrédients…">${escHtml(currentText)}</textarea>
+        <div class="regaler-inline-actions">
+          <button class="regaler-save-btn" onclick="saveRegalerText('${id}')">✓ Enregistrer</button>
+          <button class="regaler-cancel-btn" onclick="cancelRegalerEdit('${id}')">Annuler</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('redit-' + id).focus();
+  };
+
+  window.saveRegalerText = async function(id) {
+    const newText = document.getElementById('redit-' + id)?.value.trim() || '';
+    await updateDoc(doc(db, 'regaler', id), { text: newText });
+  };
+
+  window.cancelRegalerEdit = function(id) {
+    const item = regalerItems.find(i => i.id === id);
+    if (!item) return;
+    const wrapper = document.getElementById('rtext-' + id);
+    wrapper.innerHTML = `
+      ${item.text ? `<span class="regaler-text-display">${escHtml(item.text)}</span>` : ''}
+      <button class="regaler-edit-btn" onclick="editRegalerText('${id}')" title="Modifier">✏</button>
+    `;
+  };
 </script>
 </body>
 </html>

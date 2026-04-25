@@ -11,21 +11,21 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0e0e10;
-      --surface: #18181c;
-      --border: #2a2a30;
-      --text: #e8e8e0;
-      --muted: #5a5a68;
-      --accent: #c8f060;
-      --btn-add: #3b82f6;
-      --btn-add-hover: #2563eb;
-      --accent-dim: #9ab840;
-      --danger: #ff4f4f;
-      --imp1: #3a3a44;
-      --imp2: #4a5a2a;
-      --imp3: #7a8a30;
-      --imp4: #a8c040;
-      --imp5: #c8f060;
+      --bg: #FFF44F;
+      --surface: #FFFAAA;
+      --border: #C8B800;
+      --text: #1a1a0a;
+      --muted: #7a7030;
+      --accent: #1a56db;
+      --btn-add: #1a56db;
+      --btn-add-hover: #1440a8;
+      --accent-dim: #1440a8;
+      --danger: #dc2626;
+      --imp1: #d4d0b0;
+      --imp2: #86c040;
+      --imp3: #f59e0b;
+      --imp4: #f97316;
+      --imp5: #ef4444;
     }
 
     body {
@@ -75,7 +75,7 @@
       font-weight: 800;
       line-height: 1;
       letter-spacing: -0.03em;
-      color: var(--text);
+      color: #FF69B4;
     }
 
     h1 span {
@@ -386,6 +386,28 @@
 
     .toast.show { transform: translateX(-50%) translateY(0); }
 
+    /* Close button */
+    .close-btn {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.15);
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .close-btn:hover { background: rgba(0,0,0,0.25); transform: scale(1.1); }
+    .close-btn:active { transform: scale(0.93); }
+
     /* Config warning */
     .config-warn {
       background: rgba(255,79,79,0.08);
@@ -407,11 +429,12 @@
   </style>
 </head>
 <body>
+<button class="close-btn" onclick="window.close()" title="Fermer">✕</button>
 <div class="container">
   <header>
     <div class="header-tag">// firebase todo</div>
     <h1>Ma <span>liste</span></h1>
-    <div class="subtitle">Organisé. Priorisé. Stocké.</div>
+    <div class="subtitle"><span style="color:#87CEEB">Organisé</span>. <span style="color:#FF2020">Priorisé</span>. <span style="color:#90EE90">Bien-être</span>.</div>
   </header>
 
   <div id="config-warn" class="config-warn" style="display:none">

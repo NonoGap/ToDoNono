@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { overflow-x: hidden; width: 100%; overscroll-behavior-x: none; touch-action: pan-y; }
 
     :root {
       --bg: #0e0e10;
@@ -17,8 +18,8 @@
       --text: #e8e8e0;
       --muted: #5a5a68;
       --accent: #c8f060;
-      --btn-add: #3b82f6;
-      --btn-add-hover: #2563eb;
+      --btn-add: #1d4ed8;
+      --btn-add-hover: #1e3a8a;
       --accent-dim: #9ab840;
       --danger: #ff4f4f;
       --imp1: #3a3a44;
@@ -33,10 +34,6 @@
       color: var(--text);
       font-family: 'Syne', sans-serif;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 48px 16px 80px;
     }
 
     /* Noise texture overlay */
@@ -53,6 +50,8 @@
     .container {
       width: 100%;
       max-width: 680px;
+      margin: 0 auto;
+      padding: 48px 16px 80px;
       position: relative;
       z-index: 1;
     }
@@ -71,7 +70,7 @@
     }
 
     h1 {
-      font-size: clamp(2.2rem, 6vw, 3.4rem);
+      font-size: clamp(2.4rem, 7vw, 3.6rem);
       font-weight: 800;
       line-height: 1;
       letter-spacing: -0.03em;
@@ -85,7 +84,7 @@
     .subtitle {
       margin-top: 8px;
       font-family: 'DM Mono', monospace;
-      font-size: 12px;
+      font-size: 15px;
       color: var(--muted);
     }
 
@@ -386,13 +385,12 @@
 
     .toast.show { transform: translateX(-50%) translateY(0); }
 
-    /* Close button */
     .refresh-btn {
       position: fixed;
-      top: 12px;
-      right: 70px;
-      width: 96px;
-      height: 96px;
+      top: 8px;
+      right: 16px;
+      width: 72px;
+      height: 72px;
       border-radius: 50%;
       background: rgba(0,0,0,0.15);
       border: none;
@@ -408,38 +406,17 @@
     .refresh-btn:hover { background: rgba(0,0,0,0.25); transform: scale(1.1); }
     .refresh-btn:active { transform: scale(0.93); }
 
-    .close-btn {
-      position: fixed;
-      top: 16px;
-      right: 16px;
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: rgba(0,0,0,0.15);
-      border: none;
-      cursor: pointer;
-      font-size: 18px;
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 999;
-      transition: background 0.2s, transform 0.15s;
-    }
-    .close-btn:hover { background: rgba(0,0,0,0.25); transform: scale(1.1); }
-    .close-btn:active { transform: scale(0.93); }
-
     .app-initial {
       position: fixed;
-      top: 0;
-      right: 0;
+      bottom: 12px;
+      left: 16px;
       font-family: 'Syne', sans-serif;
       font-weight: 800;
       font-size: 18px;
-      color: var(--bg);
-      background: var(--accent);
-      padding: 4px 10px 5px;
-      border-radius: 0 0 0 10px;
+      color: #5c2e0e;
+      background: #0a1628;
+      padding: 5px 12px 6px;
+      border-radius: 8px;
       z-index: 1000;
       pointer-events: none;
     }
@@ -550,7 +527,7 @@
     .regaler-content-area { height: 220px; }
     .regaler-tab-panel { display: none; height: 100%; }
     .regaler-tab-panel.active { display: block; }
-    .regaler-tab-panel img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; display: block; }
+    .regaler-tab-panel img { width: 100%; height: 100%; object-fit: contain; border-radius: 6px; display: block; }
     .regaler-no-photo { height: 100%; display: flex; align-items: center; justify-content: center; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px; border: 1px dashed var(--border); border-radius: 6px; }
     .regaler-content-textarea { width: 100%; height: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; color: var(--text); font-family: 'Syne', sans-serif; font-size: 13px; line-height: 1.6; resize: none; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
     .regaler-content-textarea:focus { border-color: var(--accent); }
@@ -764,12 +741,213 @@
       padding: 1px 6px;
       border-radius: 4px;
     }
+
+    /* Auth screen */
+    .auth-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 24px;
+      padding: 32px;
+    }
+    .auth-screen h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .auth-screen h2 span { color: var(--accent); }
+    .auth-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 340px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .auth-input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+    .auth-input:focus { border-color: var(--accent); }
+    .auth-btn {
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.05em;
+    }
+    .auth-btn:hover { opacity: 0.85; }
+    .auth-btn:active { transform: scale(0.97); }
+    .auth-error {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--danger);
+      text-align: center;
+      min-height: 16px;
+    }
+    .user-select {
+      display: flex;
+      gap: 10px;
+    }
+    .user-btn {
+      flex: 1;
+      height: 64px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s, color 0.2s;
+    }
+    .user-btn:hover { border-color: var(--accent); }
+    .user-btn.selected { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+    .user-stamp {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      color: #c8f060;
+      background: #0a1628;
+      padding: 2px 6px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    /* Task edit popup */
+    .task-edit-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .task-edit-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      width: 100%;
+      max-width: 340px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .task-edit-section-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .pie-container { display: flex; justify-content: center; }
+    .pie-svg { cursor: pointer; }
+    .pie-label {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      text-anchor: middle;
+      dominant-baseline: central;
+      pointer-events: none;
+    }
+    .edit-actions { display: flex; gap: 10px; }
+    .edit-save-btn {
+      flex: 1;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 8px;
+      padding: 11px;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .edit-cancel-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 11px 18px;
+      color: var(--muted);
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .logout-btn {
+      position: fixed;
+      bottom: 12px;
+      right: 16px;
+      background: #0a1628;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px 9px;
+      color: #5c2e0e;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 999;
+    }
   </style>
 </head>
 <body>
+
+<!-- Auth screen -->
+<div class="auth-screen" id="authScreen">
+  <h2>Ma <span>liste</span></h2>
+  <div class="auth-box">
+    <div class="user-select">
+      <button class="user-btn" onclick="selectUser('A')">A</button>
+      <button class="user-btn" onclick="selectUser('Y')">Y</button>
+      <button class="user-btn" onclick="selectUser('X')">X</button>
+      <button class="user-btn" onclick="selectUser('C')">C</button>
+    </div>
+    <input
+      class="auth-input"
+      type="password"
+      id="authInput"
+      placeholder="Mot de passe…"
+      autocomplete="current-password"
+    >
+    <div class="auth-error" id="authError"></div>
+    <div style="font-family:'DM Mono',monospace;font-size:11px;text-align:center;">
+      <span onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'inline':'none'" style="color:var(--accent);cursor:pointer;letter-spacing:0.05em;">* indice</span>
+      <span style="display:none;color:var(--muted);margin-left:6px;">rue de Montparnasse — 1ère lettre Maj</span>
+    </div>
+    <button class="auth-btn" onclick="checkPassword()">Entrer</button>
+  </div>
+</div>
+
+<div id="appContent" style="display:none">
 <div class="app-initial">A</div>
 <button class="refresh-btn" onclick="location.reload(true)" title="Rafraîchir">⟳</button>
-<button class="close-btn" onclick="window.close()" title="Fermer">✕</button>
+<button class="logout-btn" onclick="logout()" title="Se déconnecter">⏻</button>
 <div class="container">
   <header>
 <h1>Ma <span>liste</span></h1>
@@ -857,13 +1035,99 @@
 </div>
 
 <div class="toast" id="toast"></div>
+</div><!-- /appContent -->
+
+<!-- Task edit popup -->
+<div class="task-edit-overlay" id="taskEditOverlay" style="display:none" onclick="if(event.target===this)closeTaskEdit()">
+  <div class="task-edit-box">
+    <div class="task-edit-section-label">Modifier la tâche</div>
+    <textarea class="task-input" id="taskEditInput" style="height:80px;resize:vertical"></textarea>
+    <div class="task-edit-section-label">Visibilité</div>
+    <div class="pie-container">
+      <svg class="pie-svg" id="taskPieSvg" viewBox="0 0 200 200" width="180" height="180">
+        <path id="pie-A" d="M 100,100 L 180,100 A 80,80 0 0,1 100,180 Z" stroke="#0e0e10" stroke-width="4" onclick="toggleAssignee('A')"/>
+        <path id="pie-Y" d="M 100,100 L 100,180 A 80,80 0 0,1 20,100 Z"  stroke="#0e0e10" stroke-width="4" onclick="toggleAssignee('Y')"/>
+        <path id="pie-X" d="M 100,100 L 20,100 A 80,80 0 0,1 100,20 Z"   stroke="#0e0e10" stroke-width="4" onclick="toggleAssignee('X')"/>
+        <path id="pie-C" d="M 100,100 L 100,20 A 80,80 0 0,1 180,100 Z"  stroke="#0e0e10" stroke-width="4" onclick="toggleAssignee('C')"/>
+        <text id="pie-label-A" x="139" y="141" class="pie-label" onclick="toggleAssignee('A')">A</text>
+        <text id="pie-label-Y" x="61"  y="141" class="pie-label" onclick="toggleAssignee('Y')">Y</text>
+        <text id="pie-label-X" x="61"  y="61"  class="pie-label" onclick="toggleAssignee('X')">X</text>
+        <text id="pie-label-C" x="139" y="61"  class="pie-label" onclick="toggleAssignee('C')">C</text>
+      </svg>
+    </div>
+    <div class="edit-actions">
+      <button class="edit-cancel-btn" onclick="closeTaskEdit()">Annuler</button>
+      <button class="edit-save-btn"   onclick="saveTaskEdit()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Auth logic -->
+<script>
+  // Mot de passe encodé en base64 — pour changer : btoa('nouveaumotdepasse')
+  // Mot de passe actuel : "Mouchotte"
+  const PASSWORD_B64 = 'TW91Y2hvdHRl';
+
+  let selectedUser = null;
+
+  function selectUser(letter) {
+    selectedUser = letter;
+    document.querySelectorAll('.user-btn').forEach(btn => {
+      btn.classList.toggle('selected', btn.textContent === letter);
+    });
+    document.getElementById('authInput').focus();
+  }
+
+  function checkPassword() {
+    const err = document.getElementById('authError');
+    if (!selectedUser) {
+      err.textContent = 'Choisis un utilisateur.';
+      setTimeout(() => err.textContent = '', 2000);
+      return;
+    }
+    const input = document.getElementById('authInput').value;
+    if (btoa(input) === PASSWORD_B64) {
+      sessionStorage.setItem('auth', '1');
+      sessionStorage.setItem('user', selectedUser);
+      localStorage.setItem('preferredUser', selectedUser);
+      unlock();
+    } else {
+      err.textContent = 'Mot de passe incorrect.';
+      setTimeout(() => err.textContent = '', 2000);
+      document.getElementById('authInput').value = '';
+      document.getElementById('authInput').focus();
+    }
+  }
+
+  function unlock() {
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('appContent').style.display = 'block';
+    const user = sessionStorage.getItem('user') || 'A';
+    document.querySelector('.app-initial').textContent = user;
+  }
+
+  function logout() {
+    sessionStorage.removeItem('auth');
+    sessionStorage.removeItem('user');
+    location.reload();
+  }
+
+  document.getElementById('authInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') checkPassword();
+  });
+
+  const saved = localStorage.getItem('preferredUser');
+  if (saved) selectUser(saved);
+
+  if (sessionStorage.getItem('auth') === '1') unlock();
+</script>
 
 <!-- Firebase SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import {
     getFirestore, collection, addDoc, deleteDoc, updateDoc,
-    doc, onSnapshot, query, orderBy, serverTimestamp
+    doc, onSnapshot, query, orderBy, serverTimestamp, getDocs
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   // ─── 🔧 CONFIGURATION FIREBASE ───────────────────────────────────────────
@@ -926,6 +1190,8 @@
       await addDoc(col, {
         text,
         importance: selectedImp,
+        user: sessionStorage.getItem('user') || '',
+        view: 'AYXC',
         createdAt: serverTimestamp()
       });
       taskInput.value = '';
@@ -1004,11 +1270,21 @@
 
       div.innerHTML = `
         <span class="todo-text">${escHtml(item.text)}</span>
+        ${item.user ? `<span class="user-stamp">${item.user}</span>` : ''}
         <div class="imp-display" title="Cliquer pour modifier la priorité" onclick="toggleImpPopup('${item.id}', ${item.importance}, this)">
           ${dots}
         </div>
         <button class="delete-btn" onclick="deleteTask('${item.id}')" title="Supprimer">✕</button>
       `;
+      // Long press
+      let pressTimer = null;
+      div.addEventListener('touchstart', () => {
+        pressTimer = setTimeout(() => openTaskEdit(item), 600);
+      }, { passive: true });
+      div.addEventListener('touchend',  () => clearTimeout(pressTimer));
+      div.addEventListener('touchmove', () => clearTimeout(pressTimer));
+      div.addEventListener('contextmenu', e => e.preventDefault());
+
       list.appendChild(div);
     });
 
@@ -1092,7 +1368,7 @@
     const time  = document.getElementById('agendaTime').value;
     if (!label || !date) return;
     try {
-      await addDoc(agendaCol, { label, date, time, category: selectedCat, important: selectedImportant, done: false, createdAt: serverTimestamp() });
+      await addDoc(agendaCol, { label, date, time, category: selectedCat, important: selectedImportant, done: false, user: sessionStorage.getItem('user') || '', createdAt: serverTimestamp() });
       selectedImportant = false;
       document.getElementById('importantToggle').classList.remove('active');
       document.getElementById('agendaLabel').value = '';
@@ -1175,7 +1451,8 @@
         <div style="flex:1; min-width:0">
           <div class="agenda-label">${item.important ? '<span class="agenda-important">!</span>' : ''}${escHtml(item.label)}</div>
         </div>
-        ${item.time ? `<span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);flex-shrink:0">${item.time}</span>` : ''}
+        ${item.time ? `<span style="font-family:'DM Mono',monospace;font-size:11px;color:#90e080;flex-shrink:0">${item.time}</span>` : ''}
+        ${item.user ? `<span class="user-stamp">${item.user}</span>` : ''}
         <input type="checkbox" class="agenda-checkbox" ${item.done ? 'checked' : ''} onchange="toggleAgendaDone('${item.id}', ${item.done})">
         <button class="delete-btn" onclick="deleteAgenda('${item.id}')" title="Supprimer">✕</button>
       `;
@@ -1192,6 +1469,67 @@
       container.appendChild(btn);
     }
   }
+
+  // ── Migration user field ─────────────────────────────────────────────────
+  window.migrateUserField = async function() {
+    const btn = document.getElementById('migrateBtn');
+    btn.textContent = '…';
+    btn.disabled = true;
+    let count = 0;
+    for (const col of [collection(db,'todos'), collection(db,'agenda'), collection(db,'regaler')]) {
+      const snap = await getDocs(col);
+      for (const d of snap.docs) {
+        if (d.data().user === undefined) {
+          await updateDoc(doc(db, col.id, d.id), { user: 'C' });
+          count++;
+        }
+      }
+    }
+    btn.textContent = `✓ ${count} docs mis à jour`;
+    setTimeout(() => btn.style.display = 'none', 3000);
+  };
+
+  // ── Task edit popup ──────────────────────────────────────────────────────
+  let editingTaskId = null;
+  let editingView   = 'AYXC';
+
+  window.openTaskEdit = function(item) {
+    editingTaskId = item.id;
+    editingView   = item.view || 'AYXC';
+    document.getElementById('taskEditInput').value = item.text;
+    updatePieColors();
+    document.getElementById('taskEditOverlay').style.display = 'flex';
+  };
+
+  function updatePieColors() {
+    ['A','Y','X','C'].forEach(l => {
+      const active = editingView.includes(l);
+      document.getElementById('pie-' + l).setAttribute('fill', active ? '#c8f060' : '#2a2a30');
+      document.getElementById('pie-label-' + l).setAttribute('fill', active ? '#0e0e10' : '#5a5a68');
+    });
+  }
+
+  window.toggleAssignee = function(letter) {
+    if (editingView.includes(letter)) {
+      editingView = editingView.replace(letter, '');
+    } else {
+      editingView = ['A','Y','X','C'].filter(l => (editingView + letter).includes(l)).join('');
+    }
+    updatePieColors();
+  };
+
+  window.saveTaskEdit = async function() {
+    const text = document.getElementById('taskEditInput').value.trim();
+    if (!text) return;
+    await updateDoc(doc(db, 'todos', editingTaskId), { text, view: editingView });
+    closeTaskEdit();
+    showToast('Tâche modifiée ✓');
+  };
+
+  window.closeTaskEdit = function() {
+    document.getElementById('taskEditOverlay').style.display = 'none';
+    editingTaskId = null;
+  };
 
   // ── Form toggle ───────────────────────────────────────────────────────────
   window.toggleForm = function(formId, btn) {
@@ -1251,7 +1589,7 @@
     let photo = '';
     if (fileInput.files[0]) photo = await resizeImage(fileInput.files[0]);
     try {
-      await addDoc(regalerCol, { label, photo, ingredients, recette, createdAt: serverTimestamp() });
+      await addDoc(regalerCol, { label, photo, ingredients, recette, user: sessionStorage.getItem('user') || '', createdAt: serverTimestamp() });
       document.getElementById('regalerLabel').value       = '';
       document.getElementById('regalerIngredients').value = '';
       document.getElementById('regalerRecette').value     = '';
@@ -1303,12 +1641,7 @@
       div.className = 'regaler-item' + (item.pinned ? ' pinned-item' : '');
       div.innerHTML = `
         <div id="rlabel-${item.id}">
-          <div class="regaler-label">${escHtml(item.label)}<button class="regaler-edit-btn" onclick="editRegalerLabel('${item.id}')" title="Modifier le titre" style="margin-left:6px">✏</button></div>
-        </div>
-        <div class="regaler-tabs" id="rtabs-${item.id}">
-          <button class="regaler-tab-btn${defaultTab === 'image' ? ' active' : ''}" data-tab="image" onclick="switchRegalerTab('${item.id}', 'image')">Image</button>
-          <button class="regaler-tab-btn${defaultTab === 'ingredients' ? ' active' : ''}" data-tab="ingredients" onclick="switchRegalerTab('${item.id}', 'ingredients')">Ingrédients</button>
-          <button class="regaler-tab-btn${defaultTab === 'recette' ? ' active' : ''}" data-tab="recette" onclick="switchRegalerTab('${item.id}', 'recette')">Recette</button>
+          <div class="regaler-label">${escHtml(item.label)}<button class="regaler-edit-btn" onclick="editRegalerLabel('${item.id}')" title="Modifier le titre" style="margin-left:6px">✏</button>${item.user ? `<span class="user-stamp" style="margin-left:8px">${item.user}</span>` : ''}</div>
         </div>
         <div class="regaler-content-area">
           <div id="rtab-image-${item.id}" class="regaler-tab-panel${defaultTab === 'image' ? ' active' : ''}">
@@ -1320,6 +1653,11 @@
           <div id="rtab-recette-${item.id}" class="regaler-tab-panel${defaultTab === 'recette' ? ' active' : ''}">
             <textarea class="regaler-content-textarea" placeholder="Recette…" onblur="saveRegalerField('${item.id}', 'recette', this)">${escHtml(recette)}</textarea>
           </div>
+        </div>
+        <div class="regaler-tabs" id="rtabs-${item.id}">
+          <button class="regaler-tab-btn${defaultTab === 'image' ? ' active' : ''}" data-tab="image" onclick="switchRegalerTab('${item.id}', 'image')">Image</button>
+          <button class="regaler-tab-btn${defaultTab === 'ingredients' ? ' active' : ''}" data-tab="ingredients" onclick="switchRegalerTab('${item.id}', 'ingredients')">Ingrédients</button>
+          <button class="regaler-tab-btn${defaultTab === 'recette' ? ' active' : ''}" data-tab="recette" onclick="switchRegalerTab('${item.id}', 'recette')">Recette</button>
         </div>
         <button class="pin-btn ${item.pinned ? 'pinned' : ''}" onclick="togglePin('${item.id}', ${!!item.pinned})" title="${item.pinned ? 'Désépingler' : 'Épingler'}">📌</button>
         <button class="delete-btn" onclick="deleteRegaler('${item.id}')" title="Supprimer">✕</button>

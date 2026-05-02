@@ -882,9 +882,9 @@
       color: var(--bg);
       border: none;
       border-radius: 8px;
-      padding: 11px;
+      padding: 8px;
       font-family: 'Syne', sans-serif;
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 700;
       cursor: pointer;
     }
@@ -892,10 +892,10 @@
       background: none;
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 11px 18px;
+      padding: 8px 14px;
       color: var(--muted);
       font-family: 'Syne', sans-serif;
-      font-size: 14px;
+      font-size: 12px;
       cursor: pointer;
     }
 
@@ -1241,6 +1241,11 @@
     const container = document.getElementById('listContainer');
     const statsText  = document.getElementById('statsText');
 
+    const currentUser = sessionStorage.getItem('user') || '';
+    if (currentUser) {
+      items = items.filter(item => (item.view || 'AYXC').includes(currentUser));
+    }
+
     statsText.innerHTML = `<span class="stats-count">${items.length}</span> tâche${items.length !== 1 ? 's' : ''}`;
 
     if (items.length === 0) {
@@ -1510,6 +1515,8 @@
   }
 
   window.toggleAssignee = function(letter) {
+    const currentUser = sessionStorage.getItem('user') || '';
+    if (letter === currentUser) return;
     if (editingView.includes(letter)) {
       editingView = editingView.replace(letter, '');
     } else {

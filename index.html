@@ -385,27 +385,6 @@
 
     .toast.show { transform: translateX(-50%) translateY(0); }
 
-    .refresh-btn {
-      position: fixed;
-      top: 8px;
-      right: 16px;
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      background: rgba(0,0,0,0.15);
-      border: none;
-      cursor: pointer;
-      font-size: 36px;
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 999;
-      transition: background 0.2s, transform 0.15s;
-    }
-    .refresh-btn:hover { background: rgba(0,0,0,0.25); transform: scale(1.1); }
-    .refresh-btn:active { transform: scale(0.93); }
-
     .app-initial {
       position: fixed;
       bottom: 12px;
@@ -901,7 +880,7 @@
 
     .logout-btn {
       position: fixed;
-      bottom: 12px;
+      bottom: max(12px, env(safe-area-inset-bottom, 12px));
       right: 16px;
       background: #0a1628;
       border: none;
@@ -946,12 +925,11 @@
 
 <div id="appContent" style="display:none">
 <div class="app-initial">A</div>
-<button class="refresh-btn" onclick="location.reload(true)" title="Rafraîchir">⟳</button>
 <button class="logout-btn" onclick="logout()" title="Se déconnecter">⏻</button>
 <div class="container">
   <header>
 <h1>Ma <span>liste</span></h1>
-    <div class="subtitle"><span style="color:#87CEEB">Organisé</span>. <span style="color:#FF2020">Priorisé</span>. <span style="color:#90EE90">Bien-être</span>.</div>
+    <div class="subtitle"><span style="color:#87CEEB">Organisé</span>. <span style="color:#FF2020">Priorisé</span>. <span style="color:#90EE90;cursor:pointer;" onclick="location.reload(true)">Bien-être</span>.</div>
   </header>
 
   <div class="tabs">
@@ -1040,8 +1018,12 @@
 <!-- Task edit popup -->
 <div class="task-edit-overlay" id="taskEditOverlay" style="display:none" onclick="if(event.target===this)closeTaskEdit()">
   <div class="task-edit-box">
-    <div class="task-edit-section-label">Modifier la tâche</div>
-    <textarea class="task-input" id="taskEditInput" style="height:80px;resize:vertical"></textarea>
+    <div class="task-edit-section-label">Libellé</div>
+    <div id="taskEditLabel" style="font-size:14px;line-height:1.5;color:var(--text);padding:4px 0;word-break:break-word;"></div>
+    <div id="taskEditInputWrap" style="display:none">
+      <div class="task-edit-section-label" style="margin-top:4px;">Modifier (C uniquement)</div>
+      <textarea class="task-input" id="taskEditInput" style="height:80px;resize:vertical"></textarea>
+    </div>
     <div class="task-edit-section-label">Visibilité</div>
     <div class="pie-container">
       <svg class="pie-svg" id="taskPieSvg" viewBox="0 0 200 200" width="180" height="180">
@@ -1501,7 +1483,10 @@
   window.openTaskEdit = function(item) {
     editingTaskId = item.id;
     editingView   = item.view || 'AYXC';
-    document.getElementById('taskEditInput').value = item.text;
+    document.getElementById('taskEditLabel').textContent = item.text;
+    const isC = sessionStorage.getItem('user') === 'C';
+    document.getElementById('taskEditInputWrap').style.display = isC ? 'block' : 'none';
+    if (isC) document.getElementById('taskEditInput').value = item.text;
     updatePieColors();
     document.getElementById('taskEditOverlay').style.display = 'flex';
   };
@@ -1526,9 +1511,14 @@
   };
 
   window.saveTaskEdit = async function() {
-    const text = document.getElementById('taskEditInput').value.trim();
-    if (!text) return;
-    await updateDoc(doc(db, 'todos', editingTaskId), { text, view: editingView });
+    const isC = sessionStorage.getItem('user') === 'C';
+    const update = { view: editingView };
+    if (isC) {
+      const text = document.getElementById('taskEditInput').value.trim();
+      if (!text) return;
+      update.text = text;
+    }
+    await updateDoc(doc(db, 'todos', editingTaskId), update);
     closeTaskEdit();
     showToast('Tâche modifiée ✓');
   };

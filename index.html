@@ -914,12 +914,12 @@
       placeholder="Mot de passe…"
       autocomplete="current-password"
     >
-    <div class="auth-error" id="authError"></div>
     <div style="font-family:'DM Mono',monospace;font-size:11px;text-align:center;">
       <span onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'inline':'none'" style="color:var(--accent);cursor:pointer;letter-spacing:0.05em;">* indice</span>
-      <span style="display:none;color:var(--muted);margin-left:6px;">rue de Montparnasse — 1ère lettre Maj</span>
+      <span id="authHint" style="display:none;color:var(--muted);margin-left:6px;"></span>
     </div>
-    <button class="auth-btn" onclick="checkPassword()">Entrer</button>
+    <div class="auth-error" id="authError"></div>
+    <button class="auth-btn" onclick="checkPassword()" style="margin-top:8px;">Entrer</button>
   </div>
 </div>
 
@@ -1046,9 +1046,19 @@
 
 <!-- Auth logic -->
 <script>
-  // Mot de passe encodé en base64 — pour changer : btoa('nouveaumotdepasse')
-  // Mot de passe actuel : "Mouchotte"
-  const PASSWORD_B64 = 'TW91Y2hvdHRl';
+  // Mots de passe par user — pour encoder : btoa('motdepasse')
+  const PASSWORDS = {
+    A: 'Q2xpY2h5',  // Clichy
+    Y: 'U2VzYW1l',      // Sesame
+    X: 'TW91Y2hvdHRl',  // Mouchotte
+    C: 'TGEgRGVmZW5zZQ==',  // La Defense
+  };
+  const HINTS = {
+    A: 'Ville de Nemea (Maj)',
+    Y: 'Concours (Maj)',
+    X: '',
+    C: '',
+  };
 
   let selectedUser = null;
 
@@ -1057,6 +1067,8 @@
     document.querySelectorAll('.user-btn').forEach(btn => {
       btn.classList.toggle('selected', btn.textContent === letter);
     });
+    const hintEl = document.getElementById('authHint');
+    if (hintEl) hintEl.textContent = HINTS[letter] || '';
     document.getElementById('authInput').focus();
   }
 
@@ -1068,7 +1080,7 @@
       return;
     }
     const input = document.getElementById('authInput').value;
-    if (btoa(input) === PASSWORD_B64) {
+    if (btoa(input) === PASSWORDS[selectedUser]) {
       sessionStorage.setItem('auth', '1');
       sessionStorage.setItem('user', selectedUser);
       localStorage.setItem('preferredUser', selectedUser);

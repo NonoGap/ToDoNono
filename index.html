@@ -429,6 +429,21 @@
     .close-btn:hover { background: rgba(0,0,0,0.25); transform: scale(1.1); }
     .close-btn:active { transform: scale(0.93); }
 
+    .app-initial {
+      position: fixed;
+      top: 0;
+      right: 0;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 18px;
+      color: var(--bg);
+      background: var(--accent);
+      padding: 4px 10px 5px;
+      border-radius: 0 0 0 10px;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
     /* Form toggle */
     .form-toggle-btn {
       width: 100%;
@@ -510,19 +525,35 @@
     .pin-btn:hover { opacity: 0.6; background: rgba(200,240,96,0.1); }
     .pin-btn.pinned { opacity: 1; }
     .regaler-item.pinned-item { border-color: var(--accent); }
-    .regaler-photo {
-      width: 100%;
-      height: auto;
-      border-radius: 6px;
+    .regaler-tabs {
+      display: flex;
+      gap: 3px;
       margin-bottom: 8px;
-      display: block;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3px;
     }
-    .regaler-text-display {
-      font-size: 13px;
+    .regaler-tab-btn {
+      flex: 1;
+      padding: 7px;
+      border: none;
+      border-radius: 5px;
+      background: none;
       color: var(--muted);
-      line-height: 1.5;
-      white-space: pre-wrap;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
     }
+    .regaler-tab-btn.active { background: var(--accent); color: var(--bg); }
+    .regaler-content-area { height: 220px; }
+    .regaler-tab-panel { display: none; height: 100%; }
+    .regaler-tab-panel.active { display: block; }
+    .regaler-tab-panel img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; display: block; }
+    .regaler-no-photo { height: 100%; display: flex; align-items: center; justify-content: center; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px; border: 1px dashed var(--border); border-radius: 6px; }
+    .regaler-content-textarea { width: 100%; height: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; color: var(--text); font-family: 'Syne', sans-serif; font-size: 13px; line-height: 1.6; resize: none; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
+    .regaler-content-textarea:focus { border-color: var(--accent); }
     .regaler-edit-btn {
       background: none;
       border: none;
@@ -650,7 +681,26 @@
       flex-shrink: 0;
       line-height: 1;
     }
-    .agenda-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); flex-shrink: 0; }
+    .agenda-checkbox {
+      width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;
+      appearance: none; -webkit-appearance: none;
+      background: #3a3a44;
+      border: 1px solid #555;
+      border-radius: 3px;
+      position: relative;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .agenda-checkbox:checked { background: var(--accent); border-color: var(--accent); }
+    .agenda-checkbox:checked::after {
+      content: '✓';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--bg);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+    }
     .imp-toggle {
       width: 100%;
       padding: 9px;
@@ -717,6 +767,7 @@
   </style>
 </head>
 <body>
+<div class="app-initial">T</div>
 <button class="refresh-btn" onclick="location.reload(true)" title="Rafraîchir">⟳</button>
 <button class="close-btn" onclick="window.close()" title="Fermer">✕</button>
 <div class="container">
@@ -774,7 +825,8 @@
         <span id="regalerPhotoLabel">📷 Choisir une photo…</span>
       </label>
       <input type="file" id="regalerPhoto" accept="image/*">
-      <textarea class="task-input" id="regalerText" placeholder="Notes, recette, ingrédients…" style="height:80px; resize:vertical"></textarea>
+      <textarea class="task-input" id="regalerIngredients" placeholder="Ingrédients…" style="height:70px; resize:vertical"></textarea>
+      <textarea class="task-input" id="regalerRecette" placeholder="Recette…" style="height:70px; resize:vertical"></textarea>
       <button class="add-btn" onclick="addRegaler()" style="width:100%">+ Ajouter</button>
     </div>
     <div id="regalerList"><div class="loading">chargement…</div></div>
@@ -1119,10 +1171,11 @@
       const isDistant = item.date < todayStr || item.date > maxDateStr;
       const monthStr  = isDistant && dateObj ? dateObj.toLocaleDateString('fr-FR', { month: 'short' }) : '';
       div.innerHTML = `
-        <div class="agenda-day" style="color:${color}">${dayNum}${monthStr ? `<span style="display:block;font-size:9px;font-weight:400;opacity:0.7">(${monthStr})</span>` : ''}${item.time ? `<span style="display:block;font-size:9px;font-weight:400;opacity:0.8">${item.time}</span>` : ''}</div>
+        <div class="agenda-day" style="color:${color}">${dayNum}${monthStr ? `<span style="display:block;font-size:9px;font-weight:400;opacity:0.7">(${monthStr})</span>` : ''}</div>
         <div style="flex:1; min-width:0">
           <div class="agenda-label">${item.important ? '<span class="agenda-important">!</span>' : ''}${escHtml(item.label)}</div>
         </div>
+        ${item.time ? `<span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);flex-shrink:0">${item.time}</span>` : ''}
         <input type="checkbox" class="agenda-checkbox" ${item.done ? 'checked' : ''} onchange="toggleAgendaDone('${item.id}', ${item.done})">
         <button class="delete-btn" onclick="deleteAgenda('${item.id}')" title="Supprimer">✕</button>
       `;
@@ -1190,19 +1243,21 @@
   });
 
   window.addRegaler = async function() {
-    const label     = document.getElementById('regalerLabel').value.trim();
-    const text      = document.getElementById('regalerText').value.trim();
-    const fileInput = document.getElementById('regalerPhoto');
+    const label       = document.getElementById('regalerLabel').value.trim();
+    const ingredients = document.getElementById('regalerIngredients').value.trim();
+    const recette     = document.getElementById('regalerRecette').value.trim();
+    const fileInput   = document.getElementById('regalerPhoto');
     if (!label) return;
     let photo = '';
     if (fileInput.files[0]) photo = await resizeImage(fileInput.files[0]);
     try {
-      await addDoc(regalerCol, { label, photo, text, createdAt: serverTimestamp() });
-      document.getElementById('regalerLabel').value = '';
+      await addDoc(regalerCol, { label, photo, ingredients, recette, createdAt: serverTimestamp() });
+      document.getElementById('regalerLabel').value       = '';
+      document.getElementById('regalerIngredients').value = '';
+      document.getElementById('regalerRecette').value     = '';
       fileInput.value = '';
       document.getElementById('regalerPhotoPreview').style.display = 'none';
       document.getElementById('regalerPhotoLabel').textContent = '📷 Choisir une photo…';
-      document.getElementById('regalerText').value = '';
       showToast('Plat ajouté ✓');
     } catch(e) {
       showToast('Erreur : ' + e.message);
@@ -1241,24 +1296,58 @@
     }
     container.innerHTML = '';
     items.forEach(item => {
+      const ingredients = item.ingredients || '';
+      const recette     = item.recette || item.text || '';
+      const defaultTab  = item.photo ? 'image' : 'ingredients';
       const div = document.createElement('div');
-      div.className = 'regaler-item';
-      if (item.pinned) div.classList.add('pinned-item');
+      div.className = 'regaler-item' + (item.pinned ? ' pinned-item' : '');
       div.innerHTML = `
         <div id="rlabel-${item.id}">
           <div class="regaler-label">${escHtml(item.label)}<button class="regaler-edit-btn" onclick="editRegalerLabel('${item.id}')" title="Modifier le titre" style="margin-left:6px">✏</button></div>
         </div>
-        ${item.photo ? `<img class="regaler-photo" src="${escHtml(item.photo)}" alt="${escHtml(item.label)}" onerror="this.style.display='none'">` : ''}
-        <div id="rtext-${item.id}">
-          ${item.text ? `<span class="regaler-text-display">${escHtml(item.text)}</span>` : ''}
-          <button class="regaler-edit-btn" onclick="editRegalerText('${item.id}')" title="Modifier">✏</button>
+        <div class="regaler-tabs" id="rtabs-${item.id}">
+          <button class="regaler-tab-btn${defaultTab === 'image' ? ' active' : ''}" data-tab="image" onclick="switchRegalerTab('${item.id}', 'image')">Image</button>
+          <button class="regaler-tab-btn${defaultTab === 'ingredients' ? ' active' : ''}" data-tab="ingredients" onclick="switchRegalerTab('${item.id}', 'ingredients')">Ingrédients</button>
+          <button class="regaler-tab-btn${defaultTab === 'recette' ? ' active' : ''}" data-tab="recette" onclick="switchRegalerTab('${item.id}', 'recette')">Recette</button>
+        </div>
+        <div class="regaler-content-area">
+          <div id="rtab-image-${item.id}" class="regaler-tab-panel${defaultTab === 'image' ? ' active' : ''}">
+            ${item.photo ? `<img src="${escHtml(item.photo)}" alt="${escHtml(item.label)}" onerror="this.style.display='none'">` : '<div class="regaler-no-photo">Aucune photo</div>'}
+          </div>
+          <div id="rtab-ingredients-${item.id}" class="regaler-tab-panel${defaultTab === 'ingredients' ? ' active' : ''}">
+            <textarea class="regaler-content-textarea" placeholder="Ingrédients…" onblur="saveRegalerField('${item.id}', 'ingredients', this)">${escHtml(ingredients)}</textarea>
+          </div>
+          <div id="rtab-recette-${item.id}" class="regaler-tab-panel${defaultTab === 'recette' ? ' active' : ''}">
+            <textarea class="regaler-content-textarea" placeholder="Recette…" onblur="saveRegalerField('${item.id}', 'recette', this)">${escHtml(recette)}</textarea>
+          </div>
         </div>
         <button class="pin-btn ${item.pinned ? 'pinned' : ''}" onclick="togglePin('${item.id}', ${!!item.pinned})" title="${item.pinned ? 'Désépingler' : 'Épingler'}">📌</button>
         <button class="delete-btn" onclick="deleteRegaler('${item.id}')" title="Supprimer">✕</button>
       `;
+      const taIng = div.querySelector(`#rtab-ingredients-${item.id} textarea`);
+      const taRec = div.querySelector(`#rtab-recette-${item.id} textarea`);
+      taIng.dataset.original = ingredients;
+      taRec.dataset.original = recette;
       container.appendChild(div);
     });
   }
+
+  window.switchRegalerTab = function(id, tab) {
+    document.getElementById('rtabs-' + id).querySelectorAll('.regaler-tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    ['image', 'ingredients', 'recette'].forEach(t => {
+      const p = document.getElementById('rtab-' + t + '-' + id);
+      if (p) p.classList.toggle('active', t === tab);
+    });
+  };
+
+  window.saveRegalerField = async function(id, field, el) {
+    if (el.value === el.dataset.original) return;
+    el.dataset.original = el.value;
+    await updateDoc(doc(db, 'regaler', id), { [field]: el.value });
+    showToast('Sauvegardé ✓');
+  };
 
   window.editRegalerLabel = function(id) {
     const wrapper = document.getElementById('rlabel-' + id);
@@ -1289,35 +1378,6 @@
     wrapper.innerHTML = `<div class="regaler-label">${escHtml(item.label)}<button class="regaler-edit-btn" onclick="editRegalerLabel('${id}')" title="Modifier le titre" style="margin-left:6px">✏</button></div>`;
   };
 
-  window.editRegalerText = function(id) {
-    const wrapper = document.getElementById('rtext-' + id);
-    const currentText = wrapper.querySelector('.regaler-text-display')?.textContent?.trim() || '';
-    wrapper.innerHTML = `
-      <div class="regaler-inline-edit">
-        <textarea id="redit-${id}" placeholder="Notes, recette, ingrédients…">${escHtml(currentText)}</textarea>
-        <div class="regaler-inline-actions">
-          <button class="regaler-save-btn" onclick="saveRegalerText('${id}')">✓ Enregistrer</button>
-          <button class="regaler-cancel-btn" onclick="cancelRegalerEdit('${id}')">Annuler</button>
-        </div>
-      </div>
-    `;
-    document.getElementById('redit-' + id).focus();
-  };
-
-  window.saveRegalerText = async function(id) {
-    const newText = document.getElementById('redit-' + id)?.value.trim() || '';
-    await updateDoc(doc(db, 'regaler', id), { text: newText });
-  };
-
-  window.cancelRegalerEdit = function(id) {
-    const item = regalerItems.find(i => i.id === id);
-    if (!item) return;
-    const wrapper = document.getElementById('rtext-' + id);
-    wrapper.innerHTML = `
-      ${item.text ? `<span class="regaler-text-display">${escHtml(item.text)}</span>` : ''}
-      <button class="regaler-edit-btn" onclick="editRegalerText('${id}')" title="Modifier">✏</button>
-    `;
-  };
 </script>
 </body>
 </html>

@@ -636,7 +636,7 @@
     }
     .agenda-item[data-cat="enfants"]::before { background: #00aaff; }
     .agenda-item[data-cat="famille"]::before { background: #ff6600; }
-    .agenda-item[data-cat="loisirs"]::before     { background: #ff00aa; }
+
     .agenda-item.done { opacity: 0.45; }
     .agenda-item.done .agenda-label { text-decoration: line-through; }
     .agenda-label { font-size: 14px; color: #888; font-weight: 600; }
@@ -694,7 +694,7 @@
     }
     .cat-btn.active-enfants { background: #00aaff; color: #fff; border-color: #00aaff; }
     .cat-btn.active-famille { background: #ff6600; color: #fff; border-color: #ff6600; }
-    .cat-btn.active-loisirs     { background: #ff00aa; color: #fff; border-color: #ff00aa; }
+
 
     /* Config warning */
     .config-warn {
@@ -785,7 +785,6 @@
     <div class="agenda-legend">
       <span><span class="legend-dot" style="background:#3b82f6"></span>Enfants</span>
       <span><span class="legend-dot" style="background:#ff6600"></span>Famille</span>
-      <span><span class="legend-dot" style="background:#ff00aa"></span>Moi</span>
     </div>
     <div class="add-form" id="form-agenda" style="display:none">
       <input type="text" class="task-input" id="agendaLabel" placeholder="Libellé…" style="height:48px; resize:none">
@@ -796,7 +795,7 @@
       <div class="cat-selector">
         <button class="cat-btn active-enfants" id="catEnfants" onclick="selectCat('enfants')">Enfants</button>
         <button class="cat-btn" id="catFamille" onclick="selectCat('famille')">Famille</button>
-        <button class="cat-btn" id="catMoi" onclick="selectCat('loisirs')">Moi</button>
+
       </div>
       <button class="imp-toggle" id="importantToggle" onclick="toggleImportant()">! Important</button>
       <button class="add-btn" onclick="addAgenda()" style="width:100%">+ Ajouter</button>
@@ -897,6 +896,7 @@
 
   // ── Delete task ─────────────────────────────────────────────────────────
   window.deleteTask = async function(id) {
+    if (!confirm('Supprimer cette tâche ?')) return;
     await deleteDoc(doc(db, 'todos', id));
     showToast('Tâche supprimée');
   };
@@ -1025,7 +1025,7 @@
     selectedCat = cat;
     document.getElementById('catEnfants').className = 'cat-btn' + (cat === 'enfants' ? ' active-enfants' : '');
     document.getElementById('catFamille').className = 'cat-btn' + (cat === 'famille' ? ' active-famille' : '');
-    document.getElementById('catMoi').className     = 'cat-btn' + (cat === 'loisirs'     ? ' active-loisirs'     : '');
+
   };
 
   // Contraindre le sélecteur de date à 2026
@@ -1105,11 +1105,11 @@
       container.innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><p>Aucun événement cette semaine.</p></div>`;
     }
 
-    const catColors = { enfants: '#00aaff', famille: '#ff6600', loisirs: '#ff00aa' };
+    const catColors = { enfants: '#00aaff', famille: '#ff6600' };
     toRender.forEach(item => {
       const div = document.createElement('div');
       div.className = 'agenda-item' + (item.done ? ' done' : '');
-      div.dataset.cat = item.category || 'loisirs';
+      div.dataset.cat = item.category || 'enfants';
       const color   = catColors[item.category] || '#888';
       const dateObj  = item.date ? new Date(item.date + 'T00:00:00') : null;
       const dayNum   = dateObj ? dateObj.getDate() : '';
@@ -1120,10 +1120,10 @@
       const monthStr  = isDistant && dateObj ? dateObj.toLocaleDateString('fr-FR', { month: 'short' }) : '';
       div.innerHTML = `
         <div class="agenda-day" style="color:${color}">${dayNum}${monthStr ? `<span style="display:block;font-size:9px;font-weight:400;opacity:0.7">(${monthStr})</span>` : ''}${item.time ? `<span style="display:block;font-size:9px;font-weight:400;opacity:0.8">${item.time}</span>` : ''}</div>
-        <input type="checkbox" class="agenda-checkbox" ${item.done ? 'checked' : ''} onchange="toggleAgendaDone('${item.id}', ${item.done})">
         <div style="flex:1; min-width:0">
           <div class="agenda-label">${item.important ? '<span class="agenda-important">!</span>' : ''}${escHtml(item.label)}</div>
         </div>
+        <input type="checkbox" class="agenda-checkbox" ${item.done ? 'checked' : ''} onchange="toggleAgendaDone('${item.id}', ${item.done})">
         <button class="delete-btn" onclick="deleteAgenda('${item.id}')" title="Supprimer">✕</button>
       `;
       container.appendChild(div);
@@ -1214,6 +1214,7 @@
   };
 
   window.deleteRegaler = async function(id) {
+    if (!confirm('Supprimer ce plat ?')) return;
     await deleteDoc(doc(db, 'regaler', id));
     showToast('Plat supprimé');
   };

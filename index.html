@@ -899,27 +899,33 @@
 
 <!-- Auth screen -->
 <div class="auth-screen" id="authScreen">
+  <div id="weatherWidget" style="font-family:'DM Mono',monospace;font-size:13px;color:var(--muted);text-align:center;min-height:24px;"></div>
   <h2>Ma <span>liste</span></h2>
   <div class="auth-box">
     <div class="user-select">
-      <button class="user-btn" onclick="selectUser('A')">A</button>
-      <button class="user-btn" onclick="selectUser('Y')">Y</button>
-      <button class="user-btn" onclick="selectUser('X')">X</button>
-      <button class="user-btn" onclick="selectUser('C')">C</button>
+      <button class="user-btn" type="button" onclick="selectUser('A')">A</button>
+      <button class="user-btn" type="button" onclick="selectUser('Y')">Y</button>
+      <button class="user-btn" type="button" onclick="selectUser('X')">X</button>
+      <button class="user-btn" type="button" onclick="selectUser('C')">C</button>
     </div>
-    <input
-      class="auth-input"
-      type="password"
-      id="authInput"
-      placeholder="Mot de passe…"
-      autocomplete="current-password"
-    >
-    <div style="font-family:'DM Mono',monospace;font-size:11px;text-align:center;">
-      <span onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'inline':'none'" style="color:var(--accent);cursor:pointer;letter-spacing:0.05em;">* indice</span>
-      <span id="authHint" style="display:none;color:var(--muted);margin-left:6px;"></span>
-    </div>
-    <div class="auth-error" id="authError"></div>
-    <button class="auth-btn" onclick="checkPassword()" style="margin-top:8px;">Entrer</button>
+    <form onsubmit="checkPassword();return false;" autocomplete="on">
+      <input type="text" id="authUsername" name="username" autocomplete="username" style="display:none">
+      <input
+        class="auth-input"
+        type="password"
+        id="authInput"
+        name="password"
+        placeholder="Mot de passe…"
+        autocomplete="current-password"
+        style="width:100%"
+      >
+      <div style="font-family:'DM Mono',monospace;font-size:11px;text-align:center;margin-top:8px;">
+        <span id="authHintTrigger" onclick="const h=document.getElementById('authHint');h.style.display=h.style.display==='none'?'inline':'none'" style="color:var(--accent);cursor:pointer;letter-spacing:0.05em;display:none;">* indice</span>
+        <span id="authHint" style="display:none;color:var(--muted);margin-left:6px;"></span>
+      </div>
+      <div class="auth-error" id="authError"></div>
+      <button class="auth-btn" type="submit" style="margin-top:8px;width:100%">Entrer</button>
+    </form>
   </div>
 </div>
 
@@ -929,7 +935,7 @@
 <div class="container">
   <header>
 <h1>Ma <span>liste</span></h1>
-    <div class="subtitle"><span style="color:#87CEEB">Organisé</span>. <span style="color:#FF2020">Priorisé</span>. <span style="color:#90EE90;cursor:pointer;" onclick="location.reload(true)">Bien-être</span>.</div>
+    <div class="subtitle"><span style="color:#87CEEB">Organisé</span>. <span style="color:#FF2020">Priorisé</span>. <span style="color:#90EE90;cursor:pointer;" onclick="showWeatherToast()">Bien-être</span>.</div>
   </header>
 
   <div class="tabs">
@@ -1013,6 +1019,13 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div id="weatherToast" style="
+  position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-120px);
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:14px 20px;z-index:1500;text-align:center;
+  font-family:'DM Mono',monospace;font-size:12px;
+  transition:transform 0.35s ease;white-space:nowrap;
+"></div>
 </div><!-- /appContent -->
 
 <!-- Task edit popup -->
@@ -1048,16 +1061,16 @@
 <script>
   // Mots de passe par user — pour encoder : btoa('motdepasse')
   const PASSWORDS = {
-    A: 'Q2xpY2h5',  // Clichy
-    Y: 'U2VzYW1l',      // Sesame
-    X: 'TW91Y2hvdHRl',  // Mouchotte
-    C: 'TGEgRGVmZW5zZQ==',  // La Defense
+    A: 'Q2xpY2h5',
+    Y: 'U2VzYW1l',
+    X: 'TW91Y2hvdHRl',
+    C: 'S2FvbGlu',
   };
   const HINTS = {
     A: 'Ville de Nemea (Maj)',
     Y: 'Concours (Maj)',
     X: '',
-    C: '',
+    C: 'N° de rue',
   };
 
   let selectedUser = null;
@@ -1068,7 +1081,12 @@
       btn.classList.toggle('selected', btn.textContent === letter);
     });
     const hintEl = document.getElementById('authHint');
-    if (hintEl) hintEl.textContent = HINTS[letter] || '';
+    const hintTrigger = document.getElementById('authHintTrigger');
+    const hint = HINTS[letter] || '';
+    if (hintEl) { hintEl.textContent = hint; hintEl.style.display = 'none'; }
+    if (hintTrigger) hintTrigger.style.display = hint ? 'inline' : 'none';
+    const usernameEl = document.getElementById('authUsername');
+    if (usernameEl) usernameEl.value = letter;
     document.getElementById('authInput').focus();
   }
 
@@ -1114,6 +1132,65 @@
   if (saved) selectUser(saved);
 
   if (sessionStorage.getItem('auth') === '1') unlock();
+
+  // Météo Paris via Open-Meteo
+  (async () => {
+    const ICON = {
+      0:'☀️', 1:'🌤️', 2:'⛅', 3:'☁️',
+      45:'🌫️', 48:'🌫️',
+      51:'🌦️', 53:'🌦️', 55:'🌦️',
+      61:'🌧️', 63:'🌧️', 65:'🌧️',
+      71:'🌨️', 73:'🌨️', 75:'🌨️',
+      80:'🌧️', 81:'🌧️', 82:'🌧️',
+      95:'⛈️', 96:'⛈️', 99:'⛈️',
+    };
+    const DESC = {
+      0:'Ciel dégagé', 1:'Peu nuageux', 2:'Partiellement nuageux', 3:'Couvert',
+      45:'Brouillard', 48:'Brouillard givrant',
+      51:'Bruine légère', 53:'Bruine', 55:'Bruine forte',
+      61:'Pluie légère', 63:'Pluie', 65:'Pluie forte',
+      71:'Neige légère', 73:'Neige', 75:'Neige forte',
+      80:'Averses', 81:'Averses modérées', 82:'Averses fortes',
+      95:'Orage', 96:'Orage avec grêle', 99:'Orage violent',
+    };
+    try {
+      const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=48.8566&longitude=2.3522&current=temperature_2m,weather_code&hourly=temperature_2m,weather_code&timezone=Europe%2FParis&forecast_days=1');
+      const d = await r.json();
+      const temp = Math.round(d.current.temperature_2m);
+      const code = d.current.weather_code;
+      const icon = ICON[code] || '🌡️';
+      const desc = DESC[code] || '—';
+
+      // Prochaines heures
+      const now = new Date();
+      const nowH = now.getHours();
+      const hours = d.hourly.time
+        .map((t, i) => ({ h: new Date(t).getHours(), temp: Math.round(d.hourly.temperature_2m[i]), code: d.hourly.weather_code[i] }))
+        .filter(x => x.h > nowH && x.h <= nowH + 7)
+        .slice(0, 6);
+
+      const hourlyHtml = hours.map(x =>
+        `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+          <span style="font-size:10px;color:var(--muted)">${x.h}h</span>
+          <span style="font-size:18px">${ICON[x.code] || '🌡️'}</span>
+          <span style="font-size:11px;color:var(--text)">${x.temp}°</span>
+        </div>`
+      ).join('');
+
+      const html = `
+        <div style="margin-bottom:6px">
+          <span style="font-size:32px">${icon}</span>
+          <span style="font-size:20px;font-weight:700;color:var(--text);margin-left:6px">${temp}°C</span>
+          <span style="font-size:11px;color:var(--muted);margin-left:6px">${desc}</span>
+        </div>
+        <div style="display:flex;gap:16px;justify-content:center">${hourlyHtml}</div>
+      `;
+      document.getElementById('weatherWidget').innerHTML = html;
+      window._weatherHtml = html;
+    } catch(e) {
+      document.getElementById('weatherWidget').textContent = '';
+    }
+  })();
 </script>
 
 <!-- Firebase SDK -->
@@ -1275,7 +1352,7 @@
         </div>
         <button class="delete-btn" onclick="deleteTask('${item.id}')" title="Supprimer">✕</button>
       `;
-      // Long press
+      // Long press (mobile) + double-clic (desktop)
       let pressTimer = null;
       div.addEventListener('touchstart', () => {
         pressTimer = setTimeout(() => openTaskEdit(item), 600);
@@ -1283,6 +1360,7 @@
       div.addEventListener('touchend',  () => clearTimeout(pressTimer));
       div.addEventListener('touchmove', () => clearTimeout(pressTimer));
       div.addEventListener('contextmenu', e => e.preventDefault());
+      div.addEventListener('dblclick', () => openTaskEdit(item));
 
       list.appendChild(div);
     });
@@ -1549,6 +1627,17 @@
   };
 
   // ── Tab switching ─────────────────────────────────────────────────────────
+  let _weatherTimer = null;
+  window.showWeatherToast = function() {
+    const el = document.getElementById('weatherToast');
+    el.innerHTML = window._weatherHtml || '—';
+    el.style.transform = 'translateX(-50%) translateY(0)';
+    clearTimeout(_weatherTimer);
+    _weatherTimer = setTimeout(() => {
+      el.style.transform = 'translateX(-50%) translateY(-120px)';
+    }, 3000);
+  };
+
   window.switchTab = function(tab, btn) {
     document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));

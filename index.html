@@ -1028,6 +1028,19 @@
 "></div>
 </div><!-- /appContent -->
 
+<!-- Agenda detail popup -->
+<div id="agendaDetailOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:2000;display:none;align-items:center;justify-content:center;padding:24px;" onclick="if(event.target===this)closeAgendaDetail()">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;width:100%;max-width:340px;display:flex;flex-direction:column;gap:14px;">
+    <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;">Détail</div>
+    <div id="agendaDetailLabel" style="font-size:15px;font-weight:700;color:var(--text);"></div>
+    <textarea id="agendaDetailInput" class="task-input" placeholder="Ajouter un détail…" style="height:100px;resize:vertical"></textarea>
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeAgendaDetail()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;cursor:pointer;">Annuler</button>
+      <button onclick="saveAgendaDetail()" style="flex:1;background:var(--accent);color:var(--bg);border:none;border-radius:8px;padding:8px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <!-- Task edit popup -->
 <div class="task-edit-overlay" id="taskEditOverlay" style="display:none" onclick="if(event.target===this)closeTaskEdit()">
   <div class="task-edit-box">
@@ -1099,8 +1112,9 @@
     }
     const input = document.getElementById('authInput').value;
     if (btoa(input) === PASSWORDS[selectedUser]) {
-      sessionStorage.setItem('auth', '1');
-      sessionStorage.setItem('user', selectedUser);
+      const expiry = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 jours
+      localStorage.setItem('auth_expiry', expiry);
+      localStorage.setItem('auth_user', selectedUser);
       localStorage.setItem('preferredUser', selectedUser);
       unlock();
     } else {
@@ -1114,13 +1128,13 @@
   function unlock() {
     document.getElementById('authScreen').style.display = 'none';
     document.getElementById('appContent').style.display = 'block';
-    const user = sessionStorage.getItem('user') || 'A';
+    const user = localStorage.getItem('auth_user') || 'A';
     document.querySelector('.app-initial').textContent = user;
   }
 
   function logout() {
-    sessionStorage.removeItem('auth');
-    sessionStorage.removeItem('user');
+    localStorage.removeItem('auth_expiry');
+    localStorage.removeItem('auth_user');
     location.reload();
   }
 
@@ -1131,7 +1145,8 @@
   const saved = localStorage.getItem('preferredUser');
   if (saved) selectUser(saved);
 
-  if (sessionStorage.getItem('auth') === '1') unlock();
+  const authExpiry = localStorage.getItem('auth_expiry');
+  if (authExpiry && Date.now() < parseInt(authExpiry)) unlock();
 
   // Météo Paris via Open-Meteo
   (async () => {
@@ -1261,7 +1276,7 @@
       await addDoc(col, {
         text,
         importance: selectedImp,
-        user: sessionStorage.getItem('user') || '',
+        user: localStorage.getItem('auth_user') || '',
         view: 'AYXC',
         createdAt: serverTimestamp()
       });
@@ -1312,7 +1327,7 @@
     const container = document.getElementById('listContainer');
     const statsText  = document.getElementById('statsText');
 
-    const currentUser = sessionStorage.getItem('user') || '';
+    const currentUser = localStorage.getItem('auth_user') || '';
     if (currentUser) {
       items = items.filter(item => (item.view || 'AYXC').includes(currentUser));
     }
@@ -1445,7 +1460,7 @@
     const time  = document.getElementById('agendaTime').value;
     if (!label || !date) return;
     try {
-      await addDoc(agendaCol, { label, date, time, category: selectedCat, important: selectedImportant, done: false, user: sessionStorage.getItem('user') || '', createdAt: serverTimestamp() });
+      await addDoc(agendaCol, { label, date, time, category: selectedCat, important: selectedImportant, done: false, user: localStorage.getItem('auth_user') || '', view: 'AYXC', createdAt: serverTimestamp() });
       selectedImportant = false;
       document.getElementById('importantToggle').classList.remove('active');
       document.getElementById('agendaLabel').value = '';
@@ -1485,6 +1500,8 @@
   });
 
   function renderAgendaList(items) {
+    const currentUser = localStorage.getItem('auth_user') || '';
+    if (currentUser) items = items.filter(i => (i.view || 'AYXC').includes(currentUser));
     const container = document.getElementById('agendaList');
     if (items.length === 0) {
       container.innerHTML = `
@@ -1533,6 +1550,17 @@
         <input type="checkbox" class="agenda-checkbox" ${item.done ? 'checked' : ''} onchange="toggleAgendaDone('${item.id}', ${item.done})">
         <button class="delete-btn" onclick="deleteAgenda('${item.id}')" title="Supprimer">✕</button>
       `;
+      // Long press → pie (droits de visu)
+      let agendaPressTimer = null;
+      div.addEventListener('touchstart', () => {
+        agendaPressTimer = setTimeout(() => openAgendaEdit(item), 600);
+      }, { passive: true });
+      div.addEventListener('touchend',  () => clearTimeout(agendaPressTimer));
+      div.addEventListener('touchmove', () => clearTimeout(agendaPressTimer));
+      div.addEventListener('contextmenu', e => e.preventDefault());
+      // Double-clic → popup détail
+      div.addEventListener('dblclick', () => openAgendaDetail(item));
+
       container.appendChild(div);
     });
 
@@ -1566,19 +1594,44 @@
     setTimeout(() => btn.style.display = 'none', 3000);
   };
 
-  // ── Task edit popup ──────────────────────────────────────────────────────
-  let editingTaskId = null;
-  let editingView   = 'AYXC';
+  // ── Edit popup (todos + agenda) ──────────────────────────────────────────
+  let editingItemId  = null;
+  let editingColName = 'todos';
+  let editingView    = 'AYXC';
 
-  window.openTaskEdit = function(item) {
-    editingTaskId = item.id;
-    editingView   = item.view || 'AYXC';
-    document.getElementById('taskEditLabel').textContent = item.text;
-    const isC = sessionStorage.getItem('user') === 'C';
-    document.getElementById('taskEditInputWrap').style.display = isC ? 'block' : 'none';
-    if (isC) document.getElementById('taskEditInput').value = item.text;
+  function openEditPopup(item, colName, labelText, editableText) {
+    editingItemId  = item.id;
+    editingColName = colName;
+    editingView    = item.view || 'AYXC';
+    document.getElementById('taskEditLabel').textContent = labelText;
+    const isC = localStorage.getItem('auth_user') === 'C';
+    document.getElementById('taskEditInputWrap').style.display = (isC && editableText !== null) ? 'block' : 'none';
+    if (isC && editableText !== null) document.getElementById('taskEditInput').value = editableText;
     updatePieColors();
     document.getElementById('taskEditOverlay').style.display = 'flex';
+  }
+
+  window.openTaskEdit   = item => openEditPopup(item, 'todos',  item.text,  item.text);
+  window.openAgendaEdit = item => openEditPopup(item, 'agenda', item.label, item.label);
+
+  // ── Agenda detail popup ────────────────────────────────────────────────
+  let agendaDetailId = null;
+  window.openAgendaDetail = function(item) {
+    agendaDetailId = item.id;
+    document.getElementById('agendaDetailLabel').textContent = item.label;
+    document.getElementById('agendaDetailInput').value = item.detail || '';
+    const el = document.getElementById('agendaDetailOverlay');
+    el.style.display = 'flex';
+  };
+  window.closeAgendaDetail = function() {
+    document.getElementById('agendaDetailOverlay').style.display = 'none';
+    agendaDetailId = null;
+  };
+  window.saveAgendaDetail = async function() {
+    const detail = document.getElementById('agendaDetailInput').value.trim();
+    await updateDoc(doc(db, 'agenda', agendaDetailId), { detail });
+    closeAgendaDetail();
+    showToast('Détail enregistré ✓');
   };
 
   function updatePieColors() {
@@ -1590,7 +1643,7 @@
   }
 
   window.toggleAssignee = function(letter) {
-    const currentUser = sessionStorage.getItem('user') || '';
+    const currentUser = localStorage.getItem('auth_user') || '';
     if (letter === currentUser) return;
     if (editingView.includes(letter)) {
       editingView = editingView.replace(letter, '');
@@ -1601,16 +1654,16 @@
   };
 
   window.saveTaskEdit = async function() {
-    const isC = sessionStorage.getItem('user') === 'C';
+    const isC = localStorage.getItem('auth_user') === 'C';
     const update = { view: editingView };
     if (isC) {
-      const text = document.getElementById('taskEditInput').value.trim();
-      if (!text) return;
-      update.text = text;
+      const val = document.getElementById('taskEditInput').value.trim();
+      if (!val) return;
+      update[editingColName === 'agenda' ? 'label' : 'text'] = val;
     }
-    await updateDoc(doc(db, 'todos', editingTaskId), update);
+    await updateDoc(doc(db, editingColName, editingItemId), update);
     closeTaskEdit();
-    showToast('Tâche modifiée ✓');
+    showToast('Modifié ✓');
   };
 
   window.closeTaskEdit = function() {
@@ -1687,7 +1740,7 @@
     let photo = '';
     if (fileInput.files[0]) photo = await resizeImage(fileInput.files[0]);
     try {
-      await addDoc(regalerCol, { label, photo, ingredients, recette, user: sessionStorage.getItem('user') || '', createdAt: serverTimestamp() });
+      await addDoc(regalerCol, { label, photo, ingredients, recette, user: localStorage.getItem('auth_user') || '', createdAt: serverTimestamp() });
       document.getElementById('regalerLabel').value       = '';
       document.getElementById('regalerIngredients').value = '';
       document.getElementById('regalerRecette').value     = '';

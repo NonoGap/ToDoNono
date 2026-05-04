@@ -958,24 +958,21 @@
     }
     .news-item {
       border-bottom: 1px solid var(--border);
-      padding-bottom: 10px;
+      padding-bottom: 6px;
     }
     .news-item:last-child { border-bottom: none; padding-bottom: 0; }
     .news-item a {
       color: var(--text);
       text-decoration: none;
       font-size: 13px;
-      line-height: 1.5;
+      line-height: 1.4;
       display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       transition: color 0.15s;
     }
     .news-item a:hover { color: var(--accent); }
-    .news-item-date {
-      font-family: 'DM Mono', monospace;
-      font-size: 10px;
-      color: var(--muted);
-      margin-top: 3px;
-    }
   </style>
 </head>
 <body>
@@ -1980,7 +1977,7 @@
   let _newsCache = null;
   let _newsCacheTime = 0;
   const NEWS_TTL = 5 * 60 * 1000;
-  const NEWS_RSS = 'https://www.lemonde.fr/rss/une.xml';
+  const NEWS_RSS = 'https://www.franceinfo.fr/titres.rss';
 
   window.showNewsPopup = async function() {
     document.getElementById('newsOverlay').style.display = 'flex';
@@ -1994,7 +1991,7 @@
     listEl.innerHTML = '<div class="loading">chargement…</div>';
 
     try {
-      const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(NEWS_RSS)}&count=12`;
+      const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(NEWS_RSS)}&count=15`;
       const r = await fetch(url);
       const data = await r.json();
       if (data.status !== 'ok') throw new Error('RSS error');
@@ -2009,15 +2006,10 @@
 
   function renderNewsItems(items, listEl) {
     listEl.innerHTML = '';
-    items.forEach(item => {
-      const date = new Date(item.pubDate);
-      const dateStr = date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    items.slice(0, 15).forEach(item => {
       const div = document.createElement('div');
       div.className = 'news-item';
-      div.innerHTML = `
-        <a href="${escHtml(item.link)}" target="_blank" rel="noopener noreferrer">${escHtml(item.title)}</a>
-        <div class="news-item-date">${dateStr}</div>
-      `;
+      div.innerHTML = `<a href="${escHtml(item.link)}" target="_blank" rel="noopener noreferrer" title="${escHtml(item.title)}">${escHtml(item.title)}</a>`;
       listEl.appendChild(div);
     });
   }

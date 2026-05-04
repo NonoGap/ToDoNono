@@ -911,7 +911,7 @@
       border-radius: 14px;
       padding: 20px;
       width: 100%;
-      max-width: 420px;
+      max-width: 840px;
       max-height: 80vh;
       display: flex;
       flex-direction: column;
@@ -973,6 +973,32 @@
       transition: color 0.15s;
     }
     .news-item a:hover { color: var(--accent); }
+
+    /* News category filter */
+    .news-cat-bar {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      flex-shrink: 0;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+    .news-cat-bar::-webkit-scrollbar { display: none; }
+    .news-cat-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 10px;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+    }
+    .news-cat-btn:hover { border-color: var(--accent); color: var(--text); }
+    .news-cat-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
   </style>
 </head>
 <body>
@@ -1099,6 +1125,8 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div id="ipDisplay" style="text-align:center;font-family:'DM Mono',monospace;font-size:10px;color:#444;padding:16px 0 4px;"></div>
+<script>document.getElementById('ipDisplay').textContent=window.location.hostname+(window.location.port?':'+window.location.port:'');</script>
 <div id="weatherToast" style="
   position:fixed;top:60px;left:50%;
   transform:translateX(-50%) translateY(-400px);
@@ -1160,6 +1188,7 @@
       <span class="news-source" id="newsSource"></span>
       <button class="news-close" onclick="closeNewsPopup()">✕</button>
     </div>
+    <div id="newsCatBar" class="news-cat-bar"></div>
     <div id="newsList" class="news-list">
       <div class="loading">chargement…</div>
     </div>
@@ -1974,39 +2003,93 @@
   };
 
   // ── News popup ────────────────────────────────────────────────────────────
-  let _newsCache = null;
+  let _newsCache     = null;
   let _newsCacheTime = 0;
-  const NEWS_TTL = 5 * 60 * 1000;
-  const NEWS_RSS = 'https://www.franceinfo.fr/titres.rss';
+  const NEWS_TTL     = 5 * 60 * 1000;
+
+  let _newsCategories  = [];
+  let _selectedNewsCat = null;
+  let _newsCatsLoaded  = false;
+
+  const newsCatCol = collection(db, 'newsCategories');
+
+  async function loadNewsCategories() {
+    if (_newsCatsLoaded) { renderNewsCatBar(); return; }
+    try {
+      const snap = await getDocs(query(newsCatCol, orderBy('order')));
+      _newsCategories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      _newsCatsLoaded = true;
+    } catch(e) {}
+    renderNewsCatBar();
+  }
+
+  function renderNewsCatBar() {
+    const bar = document.getElementById('newsCatBar');
+    if (!bar || _newsCategories.length === 0) return;
+    bar.innerHTML = '';
+    const mkBtn = (label, id) => {
+      const b = document.createElement('button');
+      b.className = 'news-cat-btn' + (_selectedNewsCat === id ? ' active' : '');
+      b.textContent = label;
+      b.onclick = () => { _selectedNewsCat = id; renderNewsCatBar(); applyNewsFilter(); };
+      bar.appendChild(b);
+    };
+    mkBtn('Toutes', null);
+    _newsCategories.forEach(c => mkBtn(c.icon + ' ' + c.name, c.id));
+  }
+
+  function applyNewsFilter() {
+    const listEl = document.getElementById('newsList');
+    if (!_newsCache) return;
+    if (_selectedNewsCat === null) { renderNewsItems(_newsCache, listEl); return; }
+    const cat = _newsCategories.find(c => c.id === _selectedNewsCat);
+    if (!cat) { renderNewsItems(_newsCache, listEl); return; }
+    const kws = cat.keywords.map(k => k.toLowerCase());
+    const filtered = _newsCache.filter(item =>
+      kws.some(kw => item.title.toLowerCase().includes(kw))
+    );
+    renderNewsItems(filtered, listEl);
+  }
 
   window.showNewsPopup = async function() {
     document.getElementById('newsOverlay').style.display = 'flex';
     const listEl = document.getElementById('newsList');
+    loadNewsCategories();
 
     if (_newsCache && Date.now() - _newsCacheTime < NEWS_TTL) {
-      renderNewsItems(_newsCache, listEl);
+      applyNewsFilter();
       return;
     }
 
     listEl.innerHTML = '<div class="loading">chargement…</div>';
 
     try {
-      const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(NEWS_RSS)}&count=15`;
-      const r = await fetch(url);
-      const data = await r.json();
-      if (data.status !== 'ok') throw new Error('RSS error');
-      _newsCache = data.items;
+      const newsHost = (window.location.port === '3001') ? '' : `http://${window.location.hostname}:3001`;
+      const r = await fetch(newsHost + '/news');
+      if (!r.ok) throw new Error(r.status);
+      const xml    = await r.text();
+      const xmlDoc = new DOMParser().parseFromString(xml, 'application/xml');
+      const items  = [...xmlDoc.querySelectorAll('item')].slice(0, 15).map(el => ({
+        title: el.querySelector('title')?.textContent || '',
+        link:  el.querySelector('link')?.nextSibling?.textContent?.trim()
+               || el.querySelector('guid')?.textContent || '#',
+      }));
+      _newsCache     = items;
       _newsCacheTime = Date.now();
-      document.getElementById('newsSource').textContent = data.feed?.title || 'Le Monde';
-      renderNewsItems(data.items, listEl);
+      document.getElementById('newsSource').textContent = 'franceinfo';
+      applyNewsFilter();
     } catch(e) {
-      listEl.innerHTML = '<div style="font-family:\'DM Mono\',monospace;font-size:12px;color:var(--muted);text-align:center;padding:20px">Impossible de charger les actualités.</div>';
+      listEl.innerHTML = '<div style="font-family:\'DM Mono\',monospace;font-size:12px;color:var(--muted);text-align:center;padding:20px">Proxy non démarré — <code>node news-proxy.js</code></div>';
     }
   };
 
   function renderNewsItems(items, listEl) {
     listEl.innerHTML = '';
-    items.slice(0, 15).forEach(item => {
+    if (items.length === 0) {
+      listEl.innerHTML = '<div style="font-family:\'DM Mono\',monospace;font-size:12px;color:var(--muted);text-align:center;padding:20px">Aucun résultat pour cette catégorie.</div>';
+      return;
+    }
+    items.forEach(item => {
       const div = document.createElement('div');
       div.className = 'news-item';
       div.innerHTML = `<a href="${escHtml(item.link)}" target="_blank" rel="noopener noreferrer" title="${escHtml(item.title)}">${escHtml(item.title)}</a>`;
@@ -2016,6 +2099,24 @@
 
   window.closeNewsPopup = function() {
     document.getElementById('newsOverlay').style.display = 'none';
+  };
+
+  // Seed Firestore newsCategories (appeler une fois depuis la console : seedNewsCategories())
+  window.seedNewsCategories = async function() {
+    const SEED = [
+      { order: 1, name: 'Politique',  icon: '🏛️', keywords: ['gouvernement', 'président', 'macron', 'sénat', 'assemblée', 'ministre', 'élection', 'loi', 'premier ministre', 'parlement', 'conseil'] },
+      { order: 2, name: 'Monde',      icon: '🌍', keywords: ['guerre', 'ukraine', 'russie', 'europe', 'états-unis', 'israel', 'international', 'onu', 'conflit', 'gaza', 'chine', 'iran'] },
+      { order: 3, name: 'Sport',      icon: '⚽', keywords: ['football', 'tennis', 'rugby', 'cyclisme', 'ligue 1', 'champion', 'match', 'coupe', 'tour de france', 'roland garros', 'formule 1', 'jo'] },
+      { order: 4, name: 'Économie',   icon: '📈', keywords: ['inflation', 'budget', 'entreprise', 'emploi', 'chômage', 'bourse', 'croissance', 'euro', 'économie', 'prix', 'pouvoir d\'achat'] },
+      { order: 5, name: 'Société',    icon: '👥', keywords: ['grève', 'manifestation', 'école', 'logement', 'sécurité', 'police', 'justice', 'procès', 'immigration', 'retraite'] },
+      { order: 6, name: 'Santé',      icon: '🏥', keywords: ['hôpital', 'médecin', 'vaccin', 'épidémie', 'cancer', 'médicament', 'santé', 'virus', 'grippe'] },
+      { order: 7, name: 'Sciences',   icon: '🔬', keywords: ['espace', 'nasa', 'recherche', 'intelligence artificielle', ' ia ', 'découverte', 'climat', 'science', 'technologie', 'nucléaire'] },
+      { order: 8, name: 'Culture',    icon: '🎭', keywords: ['cinéma', 'musique', 'livre', 'festival', 'théâtre', 'exposition', 'film', 'concert', 'culture', 'prix nobel'] },
+    ];
+    for (const cat of SEED) await addDoc(newsCatCol, cat);
+    _newsCatsLoaded = false;
+    loadNewsCategories();
+    showToast('Catégories créées ✓');
   };
 
 </script>

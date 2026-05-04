@@ -2064,8 +2064,11 @@
     listEl.innerHTML = '<div class="loading">chargement…</div>';
 
     try {
-      const newsHost = (window.location.port === '3001') ? '' : `http://${window.location.hostname}:3001`;
-      const r = await fetch(newsHost + '/news');
+      const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+      const newsUrl = isLocal
+        ? `http://${window.location.hostname}:3001/news`
+        : '/api/news';
+      const r = await fetch(newsUrl);
       if (!r.ok) throw new Error(r.status);
       const xml    = await r.text();
       const xmlDoc = new DOMParser().parseFromString(xml, 'application/xml');

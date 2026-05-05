@@ -1127,16 +1127,29 @@
 <div class="toast" id="toast"></div>
 <div id="ipDisplay" style="text-align:center;font-family:'DM Mono',monospace;font-size:10px;color:#444;padding:16px 0 4px;"></div>
 <script>document.getElementById('ipDisplay').textContent=window.location.hostname+(window.location.port?':'+window.location.port:'');</script>
-<div id="weatherToast" style="
+<div id="weatherToast" onclick="toggleWeatherForecast()" style="
   position:fixed;top:60px;left:50%;
   transform:translateX(-50%) translateY(-400px);
   background:var(--surface);border:1px solid var(--border);border-radius:12px;
   padding:14px 20px;z-index:1500;text-align:center;
   font-family:'DM Mono',monospace;font-size:12px;
   transition:transform 0.35s ease, opacity 0.35s ease;
-  opacity:0;pointer-events:none;
+  opacity:0;pointer-events:none;cursor:pointer;
 "></div>
 </div><!-- /appContent -->
+
+<!-- Task detail popup -->
+<div id="taskDetailOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:2000;align-items:center;justify-content:center;padding:24px;" onclick="if(event.target===this)closeTaskDetail()">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;width:100%;max-width:340px;display:flex;flex-direction:column;gap:14px;">
+    <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;">Détail tâche</div>
+    <div id="taskDetailLabel" style="font-size:14px;font-weight:700;color:var(--text);line-height:1.4;"></div>
+    <textarea id="taskDetailInput" class="task-input" placeholder="Ajouter un détail…" style="height:100px;resize:vertical"></textarea>
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeTaskDetail()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;cursor:pointer;">Annuler</button>
+      <button onclick="saveTaskDetail()" style="flex:1;background:var(--accent);color:var(--bg);border:none;border-radius:8px;padding:8px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">Enregistrer</button>
+    </div>
+  </div>
+</div>
 
 <!-- Agenda detail popup -->
 <div id="agendaDetailOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:2000;display:none;align-items:center;justify-content:center;padding:24px;" onclick="if(event.target===this)closeAgendaDetail()">
@@ -1294,7 +1307,7 @@
       95:'Orage', 96:'Orage avec grêle', 99:'Orage violent',
     };
     try {
-      const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=48.8566&longitude=2.3522&current=temperature_2m,weather_code&hourly=temperature_2m,weather_code&timezone=Europe%2FParis&forecast_days=1');
+      const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=48.8566&longitude=2.3522&current=temperature_2m,weather_code&hourly=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=Europe%2FParis&forecast_days=6');
       const d = await r.json();
       const temp = Math.round(d.current.temperature_2m);
       const code = d.current.weather_code;
@@ -1327,6 +1340,27 @@
       `;
       document.getElementById('weatherWidget').innerHTML = html;
       window._weatherHtml = html;
+
+      // 5 jours suivants
+      const dayNames = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+      const forecastDays = d.daily.time.slice(1, 6).map((t, i) => ({
+        label: dayNames[new Date(t).getDay()],
+        max:   Math.round(d.daily.temperature_2m_max[i + 1]),
+        min:   Math.round(d.daily.temperature_2m_min[i + 1]),
+        code:  d.daily.weather_code[i + 1],
+      }));
+      window._weatherForecastHtml = `
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;letter-spacing:0.1em">PRÉVISIONS 5 JOURS</div>
+        <div style="display:flex;gap:14px;justify-content:center">
+          ${forecastDays.map(day => `
+            <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+              <span style="font-size:10px;color:var(--muted)">${day.label}</span>
+              <span style="font-size:22px">${ICON[day.code] || '🌡️'}</span>
+              <span style="font-size:12px;font-weight:700;color:var(--text)">${day.max}°</span>
+              <span style="font-size:10px;color:var(--muted)">${day.min}°</span>
+            </div>`).join('')}
+        </div>
+      `;
     } catch(e) {
       document.getElementById('weatherWidget').textContent = '';
     }
@@ -1495,7 +1529,7 @@
       // Long press (mobile) + double-clic (desktop)
       let pressTimer = null;
       div.addEventListener('touchstart', () => {
-        pressTimer = setTimeout(() => openTaskEdit(item), 600);
+        pressTimer = setTimeout(() => openTaskDetail(item), 600);
       }, { passive: true });
       div.addEventListener('touchend',  () => clearTimeout(pressTimer));
       div.addEventListener('touchmove', () => clearTimeout(pressTimer));
@@ -1739,6 +1773,25 @@
   }
 
   window.openTaskEdit   = item => openEditPopup(item, 'todos',  item.text,  item.text);
+
+  // ── Task detail popup ──────────────────────────────────────────────────────
+  let _taskDetailId = null;
+  window.openTaskDetail = function(item) {
+    _taskDetailId = item.id;
+    document.getElementById('taskDetailLabel').textContent = item.text;
+    document.getElementById('taskDetailInput').value = item.detail || '';
+    document.getElementById('taskDetailOverlay').style.display = 'flex';
+  };
+  window.closeTaskDetail = function() {
+    document.getElementById('taskDetailOverlay').style.display = 'none';
+    _taskDetailId = null;
+  };
+  window.saveTaskDetail = async function() {
+    const detail = document.getElementById('taskDetailInput').value.trim();
+    await updateDoc(doc(db, 'todos', _taskDetailId), { detail });
+    closeTaskDetail();
+    showToast('Détail enregistré ✓');
+  };
   window.openAgendaEdit = item => openEditPopup(item, 'agenda', item.label, item.label);
 
   // ── Agenda detail popup ────────────────────────────────────────────────
@@ -1812,18 +1865,38 @@
 
   // ── Tab switching ─────────────────────────────────────────────────────────
   let _weatherTimer = null;
-  window.showWeatherToast = function() {
+  let _weatherMode  = 'current';
+
+  function _showWeatherEl(html, autoClose = true) {
     const el = document.getElementById('weatherToast');
-    el.innerHTML = window._weatherHtml || '—';
+    el.innerHTML = html;
     el.style.transform = 'translateX(-50%) translateY(0)';
     el.style.opacity = '1';
     el.style.pointerEvents = 'auto';
     clearTimeout(_weatherTimer);
-    _weatherTimer = setTimeout(() => {
-      el.style.transform = 'translateX(-50%) translateY(-400px)';
-      el.style.opacity = '0';
-      el.style.pointerEvents = 'none';
-    }, 3000);
+    if (autoClose) {
+      _weatherTimer = setTimeout(() => {
+        el.style.transform = 'translateX(-50%) translateY(-400px)';
+        el.style.opacity = '0';
+        el.style.pointerEvents = 'none';
+        _weatherMode = 'current';
+      }, 3000);
+    }
+  }
+
+  window.showWeatherToast = function() {
+    _weatherMode = 'current';
+    _showWeatherEl(window._weatherHtml || '—');
+  };
+
+  window.toggleWeatherForecast = function() {
+    if (_weatherMode === 'current') {
+      _weatherMode = 'forecast';
+      _showWeatherEl(window._weatherForecastHtml || '—', false);
+    } else {
+      _weatherMode = 'current';
+      _showWeatherEl(window._weatherHtml || '—');
+    }
   };
 
   window.switchTab = function(tab, btn) {

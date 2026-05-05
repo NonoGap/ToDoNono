@@ -894,111 +894,6 @@
       z-index: 999;
     }
 
-    /* News popup */
-    .news-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.65);
-      z-index: 3000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
-    .news-box {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 20px;
-      width: 100%;
-      max-width: 840px;
-      max-height: 80vh;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .news-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-shrink: 0;
-    }
-    .news-title {
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      color: var(--accent);
-      text-transform: uppercase;
-      letter-spacing: 0.15em;
-    }
-    .news-source {
-      font-family: 'DM Mono', monospace;
-      font-size: 10px;
-      color: var(--muted);
-    }
-    .news-close {
-      background: none;
-      border: none;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 16px;
-      width: 28px;
-      height: 28px;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: color 0.15s, background 0.15s;
-    }
-    .news-close:hover { color: var(--text); background: rgba(255,255,255,0.05); }
-    .news-list {
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .news-item {
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 6px;
-    }
-    .news-item:last-child { border-bottom: none; padding-bottom: 0; }
-    .news-item a {
-      color: var(--text);
-      text-decoration: none;
-      font-size: 13px;
-      line-height: 1.4;
-      display: block;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      transition: color 0.15s;
-    }
-    .news-item a:hover { color: var(--accent); }
-
-    /* News category filter */
-    .news-cat-bar {
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      flex-shrink: 0;
-      padding-bottom: 2px;
-      scrollbar-width: none;
-    }
-    .news-cat-bar::-webkit-scrollbar { display: none; }
-    .news-cat-btn {
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 4px 10px;
-      color: var(--muted);
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
-      flex-shrink: 0;
-    }
-    .news-cat-btn:hover { border-color: var(--accent); color: var(--text); }
-    .news-cat-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
   </style>
 </head>
 <body>
@@ -1041,7 +936,7 @@
 <div class="container">
   <header>
 <h1>Ma <span>liste</span></h1>
-    <div class="subtitle"><span style="color:#87CEEB">Organisé</span>. <span style="color:#FF2020">Priorisé</span>. <span style="color:#90EE90;cursor:pointer;" onclick="showWeatherToast();setTimeout(()=>location.reload(true),3000)">Bien-être</span>. <span style="color:#555;cursor:pointer;" onclick="showNewsPopup()">News</span>.</div>
+    <div class="subtitle"><span style="color:#87CEEB">Organisé</span>. <span style="color:#FF2020">Priorisé</span>. <span style="color:#90EE90;cursor:pointer;" onclick="showWeatherToast();setTimeout(()=>location.reload(true),3000)">Bien-être</span>. <span style="color:#555;">Lieux</span>.</div>
   </header>
 
   <div class="tabs">
@@ -1173,6 +1068,8 @@
       <div class="task-edit-section-label" style="margin-top:4px;">Modifier (C uniquement)</div>
       <textarea class="task-input" id="taskEditInput" style="height:80px;resize:vertical"></textarea>
     </div>
+    <div class="task-edit-section-label">Détail</div>
+    <textarea class="task-input" id="taskEditDetailInput" style="height:60px;resize:vertical" placeholder="Ajouter un détail…"></textarea>
     <div class="task-edit-section-label">Visibilité</div>
     <div class="pie-container">
       <svg class="pie-svg" id="taskPieSvg" viewBox="0 0 200 200" width="180" height="180">
@@ -1193,20 +1090,6 @@
   </div>
 </div>
 
-<!-- News popup -->
-<div class="news-overlay" id="newsOverlay" style="display:none" onclick="if(event.target===this)closeNewsPopup()">
-  <div class="news-box">
-    <div class="news-header">
-      <span class="news-title">Actus du jour</span>
-      <span class="news-source" id="newsSource"></span>
-      <button class="news-close" onclick="closeNewsPopup()">✕</button>
-    </div>
-    <div id="newsCatBar" class="news-cat-bar"></div>
-    <div id="newsList" class="news-list">
-      <div class="loading">chargement…</div>
-    </div>
-  </div>
-</div>
 
 <!-- Auth logic -->
 <script>
@@ -1700,7 +1583,7 @@
       const isDistant = item.date < todayStr || item.date > maxDateStr;
       const monthStr  = isDistant && dateObj ? dateObj.toLocaleDateString('fr-FR', { month: 'short' }) : '';
       div.innerHTML = `
-        <div class="agenda-day" style="color:${color}">${dayNum}${monthStr ? `<span style="display:block;font-size:9px;font-weight:400;opacity:0.7">(${monthStr})</span>` : ''}</div>
+        <div class="agenda-day" style="color:${color}"><span style="display:block;font-size:9px;font-weight:500;opacity:0.7;letter-spacing:0.05em">${dayAbbr}</span>${dayNum}${monthStr ? `<span style="display:block;font-size:9px;font-weight:400;opacity:0.7">(${monthStr})</span>` : ''}</div>
         <div style="flex:1; min-width:0">
           <div class="agenda-label">${item.important ? '<span class="agenda-important">!</span>' : ''}${escHtml(item.label)}</div>
         </div>
@@ -1765,6 +1648,7 @@
     editingItemUser = item.user || '';
     editingView    = item.view || 'AYXC';
     document.getElementById('taskEditLabel').textContent = labelText;
+    document.getElementById('taskEditDetailInput').value = item.detail || '';
     const isC = localStorage.getItem('auth_user') === 'C';
     document.getElementById('taskEditInputWrap').style.display = (isC && editableText !== null) ? 'block' : 'none';
     if (isC && editableText !== null) document.getElementById('taskEditInput').value = editableText;
@@ -1839,7 +1723,8 @@
 
   window.saveTaskEdit = async function() {
     const isC = localStorage.getItem('auth_user') === 'C';
-    const update = { view: editingView };
+    const detail = document.getElementById('taskEditDetailInput').value.trim();
+    const update = { view: editingView, detail };
     if (isC) {
       const val = document.getElementById('taskEditInput').value.trim();
       if (!val) return;
@@ -1867,35 +1752,33 @@
   let _weatherTimer = null;
   let _weatherMode  = 'current';
 
-  function _showWeatherEl(html, autoClose = true) {
+  function _showWeatherEl(html, delay = 4000) {
     const el = document.getElementById('weatherToast');
     el.innerHTML = html;
     el.style.transform = 'translateX(-50%) translateY(0)';
     el.style.opacity = '1';
     el.style.pointerEvents = 'auto';
     clearTimeout(_weatherTimer);
-    if (autoClose) {
-      _weatherTimer = setTimeout(() => {
-        el.style.transform = 'translateX(-50%) translateY(-400px)';
-        el.style.opacity = '0';
-        el.style.pointerEvents = 'none';
-        _weatherMode = 'current';
-      }, 3000);
-    }
+    _weatherTimer = setTimeout(() => {
+      el.style.transform = 'translateX(-50%) translateY(-400px)';
+      el.style.opacity = '0';
+      el.style.pointerEvents = 'none';
+      _weatherMode = 'current';
+    }, delay);
   }
 
   window.showWeatherToast = function() {
     _weatherMode = 'current';
-    _showWeatherEl(window._weatherHtml || '—');
+    _showWeatherEl(window._weatherHtml || '—', 4000);
   };
 
   window.toggleWeatherForecast = function() {
     if (_weatherMode === 'current') {
       _weatherMode = 'forecast';
-      _showWeatherEl(window._weatherForecastHtml || '—', false);
+      _showWeatherEl(window._weatherForecastHtml || '—', 5000);
     } else {
       _weatherMode = 'current';
-      _showWeatherEl(window._weatherHtml || '—');
+      _showWeatherEl(window._weatherHtml || '—', 4000);
     }
   };
 
@@ -2075,125 +1958,6 @@
     wrapper.innerHTML = `<div class="regaler-label">${escHtml(item.label)}<button class="regaler-edit-btn" onclick="editRegalerLabel('${id}')" title="Modifier le titre" style="margin-left:6px">✏</button></div>`;
   };
 
-  // ── News popup ────────────────────────────────────────────────────────────
-  let _newsCache     = null;
-  let _newsCacheTime = 0;
-  const NEWS_TTL     = 5 * 60 * 1000;
-
-  let _newsCategories  = [];
-  let _selectedNewsCat = null;
-  let _newsCatsLoaded  = false;
-
-  const newsCatCol = collection(db, 'newsCategories');
-
-  async function loadNewsCategories() {
-    if (_newsCatsLoaded) { renderNewsCatBar(); return; }
-    try {
-      const snap = await getDocs(query(newsCatCol, orderBy('order')));
-      _newsCategories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      _newsCatsLoaded = true;
-    } catch(e) {}
-    renderNewsCatBar();
-  }
-
-  function renderNewsCatBar() {
-    const bar = document.getElementById('newsCatBar');
-    if (!bar || _newsCategories.length === 0) return;
-    bar.innerHTML = '';
-    const mkBtn = (label, id) => {
-      const b = document.createElement('button');
-      b.className = 'news-cat-btn' + (_selectedNewsCat === id ? ' active' : '');
-      b.textContent = label;
-      b.onclick = () => { _selectedNewsCat = id; renderNewsCatBar(); applyNewsFilter(); };
-      bar.appendChild(b);
-    };
-    mkBtn('Toutes', null);
-    _newsCategories.forEach(c => mkBtn(c.icon + ' ' + c.name, c.id));
-  }
-
-  function applyNewsFilter() {
-    const listEl = document.getElementById('newsList');
-    if (!_newsCache) return;
-    if (_selectedNewsCat === null) { renderNewsItems(_newsCache, listEl); return; }
-    const cat = _newsCategories.find(c => c.id === _selectedNewsCat);
-    if (!cat) { renderNewsItems(_newsCache, listEl); return; }
-    const kws = cat.keywords.map(k => k.toLowerCase());
-    const filtered = _newsCache.filter(item =>
-      kws.some(kw => item.title.toLowerCase().includes(kw))
-    );
-    renderNewsItems(filtered, listEl);
-  }
-
-  window.showNewsPopup = async function() {
-    document.getElementById('newsOverlay').style.display = 'flex';
-    const listEl = document.getElementById('newsList');
-    loadNewsCategories();
-
-    if (_newsCache && Date.now() - _newsCacheTime < NEWS_TTL) {
-      applyNewsFilter();
-      return;
-    }
-
-    listEl.innerHTML = '<div class="loading">chargement…</div>';
-
-    try {
-      const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-      const newsUrl = isLocal
-        ? `http://${window.location.hostname}:3001/news`
-        : '/api/news';
-      const r = await fetch(newsUrl);
-      if (!r.ok) throw new Error(r.status);
-      const xml    = await r.text();
-      const xmlDoc = new DOMParser().parseFromString(xml, 'application/xml');
-      const items  = [...xmlDoc.querySelectorAll('item')].slice(0, 15).map(el => ({
-        title: el.querySelector('title')?.textContent || '',
-        link:  el.querySelector('link')?.nextSibling?.textContent?.trim()
-               || el.querySelector('guid')?.textContent || '#',
-      }));
-      _newsCache     = items;
-      _newsCacheTime = Date.now();
-      document.getElementById('newsSource').textContent = 'franceinfo';
-      applyNewsFilter();
-    } catch(e) {
-      listEl.innerHTML = '<div style="font-family:\'DM Mono\',monospace;font-size:12px;color:var(--muted);text-align:center;padding:20px">Proxy non démarré — <code>node news-proxy.js</code></div>';
-    }
-  };
-
-  function renderNewsItems(items, listEl) {
-    listEl.innerHTML = '';
-    if (items.length === 0) {
-      listEl.innerHTML = '<div style="font-family:\'DM Mono\',monospace;font-size:12px;color:var(--muted);text-align:center;padding:20px">Aucun résultat pour cette catégorie.</div>';
-      return;
-    }
-    items.forEach(item => {
-      const div = document.createElement('div');
-      div.className = 'news-item';
-      div.innerHTML = `<a href="${escHtml(item.link)}" target="_blank" rel="noopener noreferrer" title="${escHtml(item.title)}">${escHtml(item.title)}</a>`;
-      listEl.appendChild(div);
-    });
-  }
-
-  window.closeNewsPopup = function() {
-    document.getElementById('newsOverlay').style.display = 'none';
-  };
-
-  // Seed Firestore newsCategories (appeler une fois depuis la console : seedNewsCategories())
-  window.seedNewsCategories = async function() {
-    const SEED = [
-      { order: 1, name: 'Politique',  icon: '🏛️', keywords: ['gouvernement', 'président', 'macron', 'sénat', 'assemblée', 'ministre', 'élection', 'loi', 'premier ministre', 'parlement', 'conseil'] },
-      { order: 2, name: 'Monde',      icon: '🌍', keywords: ['guerre', 'ukraine', 'russie', 'europe', 'états-unis', 'israel', 'international', 'onu', 'conflit', 'gaza', 'chine', 'iran'] },
-      { order: 3, name: 'Sport',      icon: '⚽', keywords: ['football', 'tennis', 'rugby', 'cyclisme', 'ligue 1', 'champion', 'match', 'coupe', 'tour de france', 'roland garros', 'formule 1', 'jo'] },
-      { order: 4, name: 'Économie',   icon: '📈', keywords: ['inflation', 'budget', 'entreprise', 'emploi', 'chômage', 'bourse', 'croissance', 'euro', 'économie', 'prix', 'pouvoir d\'achat'] },
-      { order: 5, name: 'Société',    icon: '👥', keywords: ['grève', 'manifestation', 'école', 'logement', 'sécurité', 'police', 'justice', 'procès', 'immigration', 'retraite'] },
-      { order: 6, name: 'Santé',      icon: '🏥', keywords: ['hôpital', 'médecin', 'vaccin', 'épidémie', 'cancer', 'médicament', 'santé', 'virus', 'grippe'] },
-      { order: 7, name: 'Sciences',   icon: '🔬', keywords: ['espace', 'nasa', 'recherche', 'intelligence artificielle', ' ia ', 'découverte', 'climat', 'science', 'technologie', 'nucléaire'] },
-      { order: 8, name: 'Culture',    icon: '🎭', keywords: ['cinéma', 'musique', 'livre', 'festival', 'théâtre', 'exposition', 'film', 'concert', 'culture', 'prix nobel'] },
-    ];
-    for (const cat of SEED) await addDoc(newsCatCol, cat);
-    _newsCatsLoaded = false;
-    loadNewsCategories();
-    showToast('Catégories créées ✓');
-  };
 
 </script>
 </body>

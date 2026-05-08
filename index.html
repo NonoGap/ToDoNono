@@ -898,7 +898,7 @@
     .edit-actions { display: flex; gap: 10px; }
     .edit-save-btn {
       flex: 1;
-      background: #25252f;
+      background: #1e1e26;
       color: var(--muted);
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -907,6 +907,11 @@
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .edit-save-btn.dirty {
+      border-color: var(--accent);
+      color: var(--accent);
     }
     .edit-pj-btn {
       background: none;
@@ -920,7 +925,7 @@
     }
     .edit-pj-btn.has-file { border-color: var(--accent); color: var(--accent); }
     .edit-cancel-btn {
-      background: none;
+      background: #1e1e26;
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 8px 14px;
@@ -1242,30 +1247,37 @@
 <!-- Task edit popup -->
 <div class="task-edit-overlay" id="taskEditOverlay" style="display:none" onclick="if(event.target===this)closeTaskEdit()">
   <div class="task-edit-box">
-    <div class="task-edit-section-label">Libellé</div>
-    <div id="taskEditLabel" ondblclick="showTaskLabelEdit()" style="font-size:14px;line-height:1.5;color:var(--text);padding:4px 0;word-break:break-word;cursor:text;" title="Double-clic pour modifier"></div>
-    <div id="taskEditInputWrap" style="display:none">
-      <div class="task-edit-section-label" style="margin-top:4px;">Modifier</div>
-      <textarea class="task-input" id="taskEditInput" style="height:80px;resize:vertical"></textarea>
-    </div>
-    <div class="task-edit-section-label">Détail</div>
-    <textarea class="task-input" id="taskEditDetailInput" style="height:60px;resize:vertical" placeholder="Ajouter un détail…"></textarea>
-    <div id="taskEditCatRow" style="display:none">
-      <div class="task-edit-section-label">Catégorie</div>
-      <div class="cat-selector">
-        <label class="cat-label"><input type="radio" name="editCat" value="travel"> ✈ Travel</label>
-        <label class="cat-label"><input type="radio" name="editCat" value="loisir"> 🎉 Loisir</label>
-        <label class="cat-label"><input type="radio" name="editCat" value="boulot"> 💼 Boulot</label>
-        <label class="cat-label"><input type="radio" name="editCat" value="general"> • Général</label>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding-bottom:4px;border-bottom:1px solid var(--border);margin-bottom:2px;">
+      <div id="taskEditLabel" style="font-size:13px;font-weight:700;color:#87CEEB;word-break:break-word;line-height:1.4;flex:1"></div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span id="taskEditUserStamp" style="display:none" class="user-stamp"></span>
+        <button id="taskEditImportantBtn" onclick="toggleEditImportant()" style="display:none;background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:13px;cursor:pointer;color:var(--muted);line-height:1">!</button>
       </div>
+    </div>
+    <div class="task-edit-section-label">Infos</div>
+    <textarea class="task-input" id="taskEditDetailInput" style="height:60px;resize:vertical" placeholder="Ajouter un détail…"></textarea>
+    <div id="taskEditCatRow" style="display:none;align-items:center;gap:10px;">
+      <span class="task-edit-section-label" style="white-space:nowrap">Catégorie</span>
+      <select id="taskEditCatSelect" class="task-input" style="height:40px;line-height:40px;flex:1;font-size:13px;cursor:pointer;padding:0 10px">
+        <option value="travel">✈ Travel</option>
+        <option value="loisir">🎉 Loisir</option>
+        <option value="boulot">💼 Boulot</option>
+        <option value="general">• Général</option>
+      </select>
     </div>
     <div id="taskEditAddrRow" style="display:none">
       <div class="task-edit-section-label">Adresse</div>
-      <input type="text" class="task-input" id="taskEditAddrInput" placeholder="Adresse…" style="height:40px" autocomplete="off"
+      <input type="text" class="task-input" id="taskEditAddrInput" placeholder="Adresse…" style="height:40px;width:100%" autocomplete="off"
         oninput="const v=this.value.trim();const l=document.getElementById('taskEditMapLink');l.style.display=v?'inline':'none';l.href=v?'https://maps.google.com?q='+encodeURIComponent(v):'#'">
       <a id="taskEditMapLink" href="#" target="_blank" rel="noopener" style="display:none;font-size:11px;color:var(--accent);text-decoration:none;font-family:'DM Mono',monospace;padding:2px 0">📍 Voir sur Maps</a>
     </div>
-    <div class="task-edit-section-label">Visibilité</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="task-edit-section-label">Visibilité</div>
+      <div id="taskEditDoneRow" style="display:none;align-items:center;gap:8px;">
+        <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Fait</span>
+        <input type="checkbox" id="taskEditDoneCheck" class="agenda-checkbox">
+      </div>
+    </div>
     <div class="pie-container">
       <svg class="pie-svg" id="taskPieSvg" viewBox="0 0 200 200" width="180" height="180">
         <path id="pie-A" d="M 100,100 L 180,100 A 80,80 0 0,1 100,180 Z" stroke="#0e0e10" stroke-width="4" onclick="toggleAssignee('A')"/>
@@ -1278,15 +1290,19 @@
         <text id="pie-label-C" x="139" y="61"  class="pie-label" onclick="toggleAssignee('C')">C</text>
       </svg>
     </div>
-    <input type="file" id="taskEditPjInput" style="display:none" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx">
-    <div id="taskEditPjStatus" style="display:none;font-size:10px;color:var(--muted);padding:3px 0 1px;word-break:break-all"></div>
-    <div id="taskEditPjMenu" style="display:none;gap:6px;margin-bottom:4px;">
-      <button onclick="pjFromClipboard()" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;">📋 Presse-papier</button>
-      <button onclick="pjFromFile()" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;">📁 Fichier</button>
+    <input type="file" id="taskEditPjInput" style="display:none" accept="image/*">
+    <div id="taskEditPjStatus" style="display:none;font-size:11px;padding:3px 0 1px;"></div>
+    <div id="taskEditPjStatus2" style="display:none;font-size:11px;padding:3px 0 1px;"></div>
+    <div id="taskEditPjConfirm" style="display:none;flex-direction:column;gap:6px;">
+      <img id="taskEditPjPreview" style="max-width:100%;max-height:110px;border-radius:6px;object-fit:contain;display:block">
+      <div style="display:flex;gap:6px;">
+        <button onclick="confirmPjClipboard()" style="flex:1;background:var(--accent);color:var(--bg);border:none;border-radius:6px;padding:7px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">✓ Utiliser</button>
+        <button onclick="cancelPjClipboard()" style="flex:1;background:none;border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--muted);font-family:'Syne',sans-serif;font-size:12px;cursor:pointer;">✕ Annuler</button>
+      </div>
     </div>
     <div class="edit-actions">
-      <button class="edit-cancel-btn" onclick="closeTaskEdit()">Retour</button>
-      <button id="taskEditPjBtn" class="edit-pj-btn" onclick="togglePjMenu()" style="display:none" title="Joindre un fichier">📎</button>
+      <button class="edit-cancel-btn" style="flex:1" onclick="closeTaskEdit()">Retour</button>
+      <button id="taskEditPjBtn" class="edit-pj-btn" onclick="triggerPjPicker()" style="display:none" title="Joindre un fichier">📎</button>
       <button class="edit-save-btn" onclick="saveTaskEdit()">Enregistrer</button>
     </div>
   </div>
@@ -1615,7 +1631,12 @@
         <button class="delete-btn" onclick="deleteTask('${item.id}')" title="Supprimer">✕</button>
       `;
       div.addEventListener('contextmenu', e => e.preventDefault());
-      div.addEventListener('dblclick', (e) => { e.preventDefault(); window.getSelection()?.removeAllRanges(); openTaskEdit(item); });
+      let _lastTapTodo = 0;
+      div.addEventListener('click', (e) => {
+        const now = Date.now();
+        if (now - _lastTapTodo < 350) { e.preventDefault(); window.getSelection()?.removeAllRanges(); openTaskEdit(item); }
+        _lastTapTodo = now;
+      });
 
       list.appendChild(div);
     });
@@ -1710,6 +1731,10 @@
       document.getElementById('agendaDate').value    = '';
       document.getElementById('agendaTime').value    = '';
       document.getElementById('agendaAddress').value = '';
+      const formAgenda = document.getElementById('form-agenda');
+      const toggleBtn  = document.querySelector('[data-label="＋ Nouvel événement"]');
+      formAgenda.style.display = 'none';
+      if (toggleBtn) toggleBtn.textContent = toggleBtn.dataset.label;
       showToast('Événement ajouté ✓');
     } catch(e) { showToast('Erreur : ' + e.message); }
   };
@@ -1764,8 +1789,9 @@
     } else {
       maxDate.setDate(today.getDate() + 6);
     }
-    const todayStr   = today.toISOString().slice(0, 10);
-    const maxDateStr = maxDate.toISOString().slice(0, 10);
+    const fmtLocal = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const todayStr   = fmtLocal(today);
+    const maxDateStr = fmtLocal(maxDate);
 
     const visible = items.filter(i => i.date >= todayStr && i.date <= maxDateStr);
     const others  = items.filter(i => i.date < todayStr || i.date > maxDateStr);
@@ -1791,19 +1817,22 @@
       const isDistant = item.date < todayStr || item.date > maxDateStr;
       const monthStr  = isDistant && dateObj ? dateObj.toLocaleDateString('fr-FR', { month: 'short' }) : '';
       div.innerHTML = `
-        <div class="agenda-day" style="color:${color}"><span style="display:block;font-size:11px;font-weight:600;color:#90e080;letter-spacing:0.05em;margin-bottom:3px">${dayAbbr}</span>${dayNum}${monthStr ? `<span style="display:block;font-size:9px;font-weight:400;opacity:0.7">(${monthStr})</span>` : ''}</div>
+        <div class="agenda-day" style="color:${color}"><span style="display:block;font-size:11px;font-weight:600;color:#90e080;letter-spacing:0.05em;margin-bottom:3px">${dayAbbr}</span><span style="${item.date === todayStr ? 'color:#ffa726;font-weight:800' : ''}">${dayNum}</span>${monthStr ? `<span style="display:block;font-size:9px;font-weight:400;opacity:0.7">(${monthStr})</span>` : ''}</div>
         <div style="flex:1; min-width:0">
           <div class="agenda-label">${item.important ? '<span class="agenda-important">!</span>' : ''}${escHtml(item.label)}</div>
           ${item.address ? `<a href="https://maps.google.com?q=${encodeURIComponent(item.address)}" target="_blank" rel="noopener" style="font-size:10px;color:var(--muted);text-decoration:none;display:block;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(item.address)}">📍 ${escHtml(item.address.split(',')[0])}</a>` : ''}
-          ${item.attachmentUrl ? `<a href="${item.attachmentUrl}" target="_blank" rel="noopener" style="font-size:10px;color:var(--muted);text-decoration:none;display:block;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(item.attachmentName||'Pièce jointe')}">📎 ${escHtml(item.attachmentName||'Pièce jointe')}</a>` : ''}
         </div>
         ${item.time ? `<span style="font-family:'DM Mono',monospace;font-size:11px;color:#90e080;flex-shrink:0">${item.time}</span>` : ''}
-        ${item.user ? `<span class="user-stamp">${item.user}</span>` : ''}
-        <input type="checkbox" class="agenda-checkbox" ${item.done ? 'checked' : ''} onchange="toggleAgendaDone('${item.id}', ${item.done})">
+        ${(()=>{ const n=[item.attachmentUrl,item.attachmentUrl2].filter(Boolean).length; return n?`<span style="font-size:13px;color:var(--muted);flex-shrink:0">${'📎'.repeat(n)}</span>`:''; })()}
         <button class="delete-btn" onclick="deleteAgenda('${item.id}')" title="Supprimer">✕</button>
       `;
       div.addEventListener('contextmenu', e => { e.preventDefault(); openAgendaEdit(item); });
-      div.addEventListener('dblclick', (e) => { e.preventDefault(); window.getSelection()?.removeAllRanges(); openAgendaEdit(item); });
+      let _lastTapAgenda = 0;
+      div.addEventListener('click', (e) => {
+        const now = Date.now();
+        if (now - _lastTapAgenda < 350) { e.preventDefault(); window.getSelection()?.removeAllRanges(); openAgendaEdit(item); }
+        _lastTapAgenda = now;
+      });
 
       container.appendChild(div);
     });
@@ -1844,17 +1873,30 @@
   let editingView     = 'AYXC';
   let editingItemUser = '';
   let pastedPjFile    = null;
+  let _editingItem    = null;
 
   function openEditPopup(item, colName, labelText, editableText) {
     editingItemId   = item.id;
     editingColName  = colName;
+    _editingItem    = item;
     editingItemUser = item.user || '';
     editingView    = item.view || 'AYXC';
     document.getElementById('taskEditLabel').textContent = labelText;
     document.getElementById('taskEditDetailInput').value = item.detail || '';
+    // User stamp
+    const stampEl = document.getElementById('taskEditUserStamp');
+    stampEl.textContent = item.user || '';
+    stampEl.style.display = item.user ? 'inline' : 'none';
+    // Important (agenda only)
+    const impBtn = document.getElementById('taskEditImportantBtn');
+    if (colName === 'agenda') {
+      impBtn.style.display = '';
+      impBtn.dataset.val = item.important ? '1' : '0';
+      _applyImpBtnStyle(impBtn);
+    } else {
+      impBtn.style.display = 'none';
+    }
     const isC = localStorage.getItem('auth_user') === 'C';
-    document.getElementById('taskEditInputWrap').style.display = (isC && editableText !== null) ? 'block' : 'none';
-    if (isC && editableText !== null) document.getElementById('taskEditInput').value = editableText;
     // PJ — uniquement pour agenda
     const pjBtn = document.getElementById('taskEditPjBtn');
     const pjInput = document.getElementById('taskEditPjInput');
@@ -1862,16 +1904,29 @@
     pjBtn.style.display = colName === 'agenda' ? 'block' : 'none';
     pjBtn.classList.remove('has-file');
     pjInput.value = '';
-    if (colName === 'agenda' && item.attachmentUrl) {
-      pjStatus.style.display = 'block';
-      if (item.attachmentUrl.startsWith('data:image')) {
-        pjStatus.innerHTML = `<img src="${item.attachmentUrl}" onclick="openPjPreview('${item.attachmentUrl}')" style="max-width:100%;max-height:120px;border-radius:6px;cursor:pointer;display:block;margin-top:4px" title="Cliquer pour agrandir">`;
+    const pjStatus2 = document.getElementById('taskEditPjStatus2');
+    const showPjLink = (el, url, name, urlField) => {
+      if (url) {
+        el.style.display = 'block';
+        el.innerHTML = `📎 <span style="color:var(--accent);cursor:pointer;text-decoration:underline">${name || 'Pièce jointe'}</span>`;
+        const onDelete = () => {
+          el.style.display = 'none'; el.innerHTML = '';
+          const upd = {}; upd[urlField] = ''; upd[urlField.replace('Url','Name')] = '';
+          updateDoc(doc(db, 'agenda', editingItemId), upd);
+          markDirty();
+        };
+        el.querySelector('span').addEventListener('click', () => openPjPreview(url, onDelete));
       } else {
-        pjStatus.innerHTML = `📎 <a href="${item.attachmentUrl}" target="_blank" rel="noopener" style="color:var(--accent)">${item.attachmentName || 'Pièce jointe'}</a>`;
+        el.style.display = 'none';
+        el.textContent = '';
       }
+    };
+    if (colName === 'agenda') {
+      showPjLink(pjStatus,  item.attachmentUrl,  item.attachmentName,  'attachmentUrl');
+      showPjLink(pjStatus2, item.attachmentUrl2, item.attachmentName2, 'attachmentUrl2');
     } else {
-      pjStatus.style.display = 'none';
-      pjStatus.textContent = '';
+      pjStatus.style.display  = 'none';
+      pjStatus2.style.display = 'none';
     }
     // Catégorie + adresse — agenda seulement
     const catRow  = document.getElementById('taskEditCatRow');
@@ -1881,8 +1936,7 @@
     if (colName === 'agenda') {
       catRow.style.display  = 'block';
       addrRow.style.display = 'block';
-      const catRadio = document.querySelector(`input[name="editCat"][value="${item.category || 'general'}"]`);
-      if (catRadio) catRadio.checked = true;
+      document.getElementById('taskEditCatSelect').value = item.category || 'general';
       addrInput.value = item.address || '';
       if (item.address) { mapLink.style.display = 'inline'; mapLink.href = 'https://maps.google.com?q=' + encodeURIComponent(item.address); }
       else { mapLink.style.display = 'none'; mapLink.href = '#'; }
@@ -1891,6 +1945,15 @@
       addrRow.style.display = 'none';
     }
     updatePieColors();
+    const doneRow = document.getElementById('taskEditDoneRow');
+    const doneCheck = document.getElementById('taskEditDoneCheck');
+    if (colName === 'agenda') {
+      doneRow.style.display = 'flex';
+      doneCheck.checked = !!item.done;
+    } else {
+      doneRow.style.display = 'none';
+    }
+    document.querySelector('.edit-save-btn').classList.remove('dirty');
     document.getElementById('taskEditOverlay').style.display = 'flex';
   }
 
@@ -1980,47 +2043,113 @@
     updatePieColors();
   };
 
-  window.togglePjMenu = function() {
-    const menu = document.getElementById('taskEditPjMenu');
-    menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
-  };
+  let _pendingPjFile = null;
 
-  window.pjFromFile = function() {
-    document.getElementById('taskEditPjMenu').style.display = 'none';
+  ['taskEditDetailInput','taskEditAddrInput'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', markDirty);
+  });
+  document.getElementById('taskEditCatSelect').addEventListener('change', markDirty);
+
+  function pjSlotsAvailable() {
+    const s1 = document.getElementById('taskEditPjStatus');
+    const s2 = document.getElementById('taskEditPjStatus2');
+    if (s1.style.display !== 'none' && s1.innerHTML &&
+        s2.style.display !== 'none' && s2.innerHTML) {
+      showToast('Maximum 2 PJ'); return false;
+    }
+    return true;
+  }
+
+  window.triggerPjPicker = function() {
+    if (!pjSlotsAvailable()) return;
     document.getElementById('taskEditPjInput').click();
   };
 
-  window.pjFromClipboard = async function() {
-    document.getElementById('taskEditPjMenu').style.display = 'none';
+  window.triggerPjPaste = async function() {
+    if (!pjSlotsAvailable()) return;
     try {
       const items = await navigator.clipboard.read();
       for (const item of items) {
         for (const type of item.types) {
           if (type.startsWith('image/')) {
             const blob = await item.getType(type);
-            pastedPjFile = new File([blob], 'image-colle.png', { type });
-            document.getElementById('taskEditPjBtn').classList.add('has-file');
-            const pjStatus = document.getElementById('taskEditPjStatus');
-            pjStatus.style.display = 'block';
-            pjStatus.textContent = '📋 Image collée ✓';
+            _pendingPjFile = new File([blob], 'image-colle.png', { type });
+            document.getElementById('taskEditPjPreview').src = URL.createObjectURL(blob);
+            document.getElementById('taskEditPjConfirm').style.display = 'flex';
             return;
           }
         }
       }
       showToast('Aucune image dans le presse-papier');
     } catch(e) {
-      showToast('Accès presse-papier refusé');
+      showToast('Accès presse-papier refusé — utilisez Galerie/Photo');
     }
   };
+
+  // Ctrl+V sur le popup — PC uniquement
+  document.getElementById('taskEditOverlay').addEventListener('paste', function(e) {
+    if (editingColName !== 'agenda') return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const blob = item.getAsFile();
+        if (!blob) continue;
+        _pendingPjFile = new File([blob], 'image-colle.png', { type: blob.type });
+        document.getElementById('taskEditPjPreview').src = URL.createObjectURL(blob);
+        document.getElementById('taskEditPjConfirm').style.display = 'flex';
+        return;
+      }
+    }
+  });
+
+  function _applyImpBtnStyle(btn) {
+    const on = btn.dataset.val === '1';
+    btn.style.background   = on ? 'var(--danger)' : 'none';
+    btn.style.color        = on ? '#fff' : 'var(--muted)';
+    btn.style.borderColor  = on ? 'var(--danger)' : 'var(--border)';
+  }
+
+  window.toggleEditImportant = function() {
+    const btn = document.getElementById('taskEditImportantBtn');
+    btn.dataset.val = btn.dataset.val === '1' ? '0' : '1';
+    _applyImpBtnStyle(btn);
+    markDirty();
+  };
+
+  function markDirty() {
+    document.querySelector('.edit-save-btn').classList.add('dirty');
+  }
+
+  function setPjStatusPreview(file, slotEl) {
+    const objectUrl = URL.createObjectURL(file);
+    const el = slotEl || document.getElementById('taskEditPjStatus');
+    el.style.display = 'block';
+    el.innerHTML = `📎 <span style="color:var(--accent);cursor:pointer;text-decoration:underline">${file.name}</span>`;
+    const onDelete = () => { el.style.display = 'none'; el.innerHTML = ''; pastedPjFile = null; document.getElementById('taskEditPjBtn').classList.remove('has-file'); markDirty(); };
+    el.querySelector('span').addEventListener('click', () => openPjPreview(objectUrl, onDelete));
+    document.getElementById('taskEditPjBtn').classList.add('has-file');
+    markDirty();
+  }
+
+  window.confirmPjClipboard = function() {
+    pastedPjFile = _pendingPjFile;
+    _pendingPjFile = null;
+    document.getElementById('taskEditPjConfirm').style.display = 'none';
+    setPjStatusPreview(pastedPjFile);
+  };
+
+  window.cancelPjClipboard = function() {
+    _pendingPjFile = null;
+    document.getElementById('taskEditPjConfirm').style.display = 'none';
+    document.getElementById('taskEditPjPreview').src = '';
+  };
+
   document.getElementById('taskEditPjInput').addEventListener('change', function() {
     const file = this.files[0];
     if (!file) return;
     pastedPjFile = null;
-    const pjBtn = document.getElementById('taskEditPjBtn');
-    const pjStatus = document.getElementById('taskEditPjStatus');
-    pjBtn.classList.add('has-file');
-    pjStatus.style.display = 'block';
-    pjStatus.textContent = '📎 ' + file.name;
+    setPjStatusPreview(file);
   });
 
   document.getElementById('taskEditOverlay').addEventListener('paste', function(e) {
@@ -2032,55 +2161,36 @@
         const blob = item.getAsFile();
         if (!blob) continue;
         pastedPjFile = new File([blob], 'image-colle.png', { type: blob.type });
-        document.getElementById('taskEditPjBtn').classList.add('has-file');
-        const pjStatus = document.getElementById('taskEditPjStatus');
-        pjStatus.style.display = 'block';
-        pjStatus.textContent = '📋 Image collée ✓';
+        setPjStatusPreview(pastedPjFile);
         break;
       }
     }
   });
 
-  window.showTaskLabelEdit = function() {
-    const wrap = document.getElementById('taskEditInputWrap');
-    const input = document.getElementById('taskEditInput');
-    wrap.style.display = 'block';
-    input.value = document.getElementById('taskEditLabel').textContent;
-    input.focus();
-  };
 
   window.saveTaskEdit = async function() {
     const detail = document.getElementById('taskEditDetailInput').value.trim();
     const update = { view: editingView, detail };
     if (editingColName === 'agenda') {
-      const catRadio = document.querySelector('input[name="editCat"]:checked');
-      if (catRadio) update.category = catRadio.value;
-      update.address = document.getElementById('taskEditAddrInput').value.trim();
-    }
-    const wrap = document.getElementById('taskEditInputWrap');
-    if (wrap.style.display !== 'none') {
-      const val = document.getElementById('taskEditInput').value.trim();
-      if (!val) return;
-      update[editingColName === 'agenda' ? 'label' : 'text'] = val;
+      update.category  = document.getElementById('taskEditCatSelect').value;
+      update.address   = document.getElementById('taskEditAddrInput').value.trim();
+      update.done      = document.getElementById('taskEditDoneCheck').checked;
+      update.important = document.getElementById('taskEditImportantBtn').dataset.val === '1';
     }
     const pjFile = pastedPjFile || document.getElementById('taskEditPjInput').files[0];
     if (pjFile && editingColName === 'agenda') {
+      let url = null, name = pjFile.name;
       if (pjFile.type.startsWith('image/')) {
-        update.attachmentUrl  = await resizeImage(pjFile);
-        update.attachmentName = pjFile.name;
-      } else if (storage) {
-        try {
-          const sRef = storageRef(storage, `pj/agenda/${editingItemId}/${pjFile.name}`);
-          await uploadBytes(sRef, pjFile);
-          update.attachmentUrl  = await getDownloadURL(sRef);
-          update.attachmentName = pjFile.name;
-        } catch(e) {
-          showToast('Erreur PJ : ' + (e.code || e.message));
-          return;
+        url = await resizeImage(pjFile, 600, 0.65);
+      }
+      if (url) {
+        if (!_editingItem?.attachmentUrl) {
+          update.attachmentUrl  = url; update.attachmentName  = name;
+        } else if (!_editingItem?.attachmentUrl2) {
+          update.attachmentUrl2 = url; update.attachmentName2 = name;
+        } else {
+          showToast('Maximum 2 pièces jointes atteint'); return;
         }
-      } else {
-        showToast('Fichiers non-image non supportés sans Firebase Storage');
-        return;
       }
     }
     await updateDoc(doc(db, editingColName, editingItemId), update);
@@ -2088,11 +2198,35 @@
     showToast('Modifié ✓');
   };
 
+  window.openPjPreview = function(url, onDelete) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px';
+    overlay.innerHTML = `
+      <img src="${url}" style="max-width:95vw;max-height:80vh;border-radius:8px;object-fit:contain;cursor:zoom-out">
+      <div style="display:flex;gap:12px">
+        ${onDelete ? `<button style="background:#ff4f4f22;border:1px solid #ff4f4f66;border-radius:8px;padding:10px 20px;color:#ff8080;font-family:'Syne',sans-serif;font-size:13px;cursor:pointer">✕ Supprimer</button>` : ''}
+        <button style="background:var(--accent);border:none;border-radius:8px;padding:10px 20px;color:var(--bg);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer">Fermer</button>
+      </div>`;
+    overlay.querySelector('img').onclick = () => overlay.remove();
+    overlay.querySelectorAll('button').forEach((btn, i) => {
+      btn.onclick = () => {
+        if (i === 0 && onDelete) {
+          if (confirm('Supprimer cette pièce jointe ?')) { overlay.remove(); onDelete(); }
+        } else {
+          overlay.remove();
+        }
+      };
+    });
+    document.body.appendChild(overlay);
+  };
+
   window.closeTaskEdit = function() {
     document.getElementById('taskEditOverlay').style.display = 'none';
-    document.getElementById('taskEditPjMenu').style.display = 'none';
-    editingTaskId = null;
-    pastedPjFile  = null;
+    document.getElementById('taskEditPjConfirm').style.display = 'none';
+    editingTaskId  = null;
+    pastedPjFile   = null;
+    _pendingPjFile = null;
+    _editingItem   = null;
   };
 
   // ── Form toggle ───────────────────────────────────────────────────────────

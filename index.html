@@ -629,6 +629,7 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      user-select: none;
       margin-bottom: 8px;
       animation: slideIn 0.25s ease;
       position: relative;
@@ -987,12 +988,13 @@
       background: none;
       border: none;
       color: var(--muted);
-      font-size: 15px;
+      font-size: 22px;
       cursor: pointer;
-      width: 30px; height: 30px;
-      border-radius: 6px;
+      width: 40px; height: 40px;
+      border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
       transition: background 0.15s, color 0.15s;
+      flex-shrink: 0;
     }
     .gemini-close:hover { background: rgba(255,79,79,0.1); color: var(--danger); }
     .gemini-messages {
@@ -1155,9 +1157,6 @@
     </div>
   </div>
 
-  <div class="stats">
-    <span id="statsText">— tâches</span>
-  </div>
 
   <div id="listContainer">
     <div class="loading">chargement…</div>
@@ -1183,8 +1182,10 @@
   <div id="tab-agenda" class="tab-content" style="display:none">
     <div class="form-toggle-row"><button class="form-toggle-btn" data-label="＋ Nouvel événement" onclick="toggleForm('form-agenda', this)">＋ Nouvel événement</button></div>
     <div class="agenda-legend">
-      <span><span class="legend-dot" style="background:#3b82f6"></span>Enfants</span>
-      <span><span class="legend-dot" style="background:#ff6600"></span>Famille</span>
+      <span><span class="legend-dot" style="background:#29b6f6"></span>Travel</span>
+      <span><span class="legend-dot" style="background:#ab47bc"></span>Loisir</span>
+      <span><span class="legend-dot" style="background:#ffa726"></span>Boulot</span>
+      <span><span class="legend-dot" style="background:#90a4ae"></span>Général</span>
     </div>
     <div class="add-form" id="form-agenda" style="display:none">
       <input type="text" class="task-input" id="agendaLabel" placeholder="Libellé…" style="height:48px; resize:none">
@@ -1279,7 +1280,7 @@
     <div id="taskEditPjStatus" style="display:none;font-size:10px;color:var(--muted);padding:3px 0 1px;word-break:break-all"></div>
     <div class="edit-actions">
       <button class="edit-cancel-btn" onclick="closeTaskEdit()">Retour</button>
-      <button id="taskEditPjBtn" class="edit-pj-btn" onclick="triggerPjPicker()" style="display:none" title="Joindre un fichier">📎</button>
+      <button id="taskEditPjBtn" class="edit-pj-btn" onclick="triggerPjPicker()" style="display:none" title="Joindre un fichier — ou Ctrl+V pour coller une image">📎</button>
       <button class="edit-save-btn"   onclick="saveTaskEdit()">Enregistrer</button>
     </div>
   </div>
@@ -1852,6 +1853,7 @@
   let editingColName  = 'todos';
   let editingView     = 'AYXC';
   let editingItemUser = '';
+  let pastedPjFile    = null;
 
   function openEditPopup(item, colName, labelText, editableText) {
     editingItemId   = item.id;
@@ -1990,11 +1992,30 @@
   document.getElementById('taskEditPjInput').addEventListener('change', function() {
     const file = this.files[0];
     if (!file) return;
+    pastedPjFile = null;
     const pjBtn = document.getElementById('taskEditPjBtn');
     const pjStatus = document.getElementById('taskEditPjStatus');
     pjBtn.classList.add('has-file');
     pjStatus.style.display = 'block';
     pjStatus.textContent = '📎 ' + file.name;
+  });
+
+  document.getElementById('taskEditOverlay').addEventListener('paste', function(e) {
+    if (editingColName !== 'agenda') return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const blob = item.getAsFile();
+        if (!blob) continue;
+        pastedPjFile = new File([blob], 'image-colle.png', { type: blob.type });
+        document.getElementById('taskEditPjBtn').classList.add('has-file');
+        const pjStatus = document.getElementById('taskEditPjStatus');
+        pjStatus.style.display = 'block';
+        pjStatus.textContent = '📋 Image collée ✓';
+        break;
+      }
+    }
   });
 
   window.showTaskLabelEdit = function() {
@@ -2019,7 +2040,7 @@
       if (!val) return;
       update[editingColName === 'agenda' ? 'label' : 'text'] = val;
     }
-    const pjFile = document.getElementById('taskEditPjInput').files[0];
+    const pjFile = pastedPjFile || document.getElementById('taskEditPjInput').files[0];
     if (pjFile && editingColName === 'agenda') {
       if (!storage) {
         showToast('Firebase Storage non activé dans ce projet');
@@ -2044,6 +2065,7 @@
   window.closeTaskEdit = function() {
     document.getElementById('taskEditOverlay').style.display = 'none';
     editingTaskId = null;
+    pastedPjFile  = null;
   };
 
   // ── Form toggle ───────────────────────────────────────────────────────────

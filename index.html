@@ -223,6 +223,7 @@
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 14px 16px;
+      touch-action: manipulation;
       display: flex;
       align-items: center;
       gap: 14px;
@@ -630,6 +631,7 @@
       align-items: center;
       gap: 12px;
       user-select: none;
+      touch-action: manipulation;
       margin-bottom: 8px;
       animation: slideIn 0.25s ease;
       position: relative;
@@ -1278,10 +1280,14 @@
     </div>
     <input type="file" id="taskEditPjInput" style="display:none" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx">
     <div id="taskEditPjStatus" style="display:none;font-size:10px;color:var(--muted);padding:3px 0 1px;word-break:break-all"></div>
+    <div id="taskEditPjMenu" style="display:none;gap:6px;margin-bottom:4px;">
+      <button onclick="pjFromClipboard()" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;">📋 Presse-papier</button>
+      <button onclick="pjFromFile()" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;">📁 Fichier</button>
+    </div>
     <div class="edit-actions">
       <button class="edit-cancel-btn" onclick="closeTaskEdit()">Retour</button>
-      <button id="taskEditPjBtn" class="edit-pj-btn" onclick="triggerPjPicker()" style="display:none" title="Joindre un fichier — ou Ctrl+V pour coller une image">📎</button>
-      <button class="edit-save-btn"   onclick="saveTaskEdit()">Enregistrer</button>
+      <button id="taskEditPjBtn" class="edit-pj-btn" onclick="togglePjMenu()" style="display:none" title="Joindre un fichier">📎</button>
+      <button class="edit-save-btn" onclick="saveTaskEdit()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -1568,14 +1574,12 @@
   // ── Render list ──────────────────────────────────────────────────────────
   function renderList(items) {
     const container = document.getElementById('listContainer');
-    const statsText  = document.getElementById('statsText');
 
     const currentUser = localStorage.getItem('auth_user') || '';
     if (currentUser) {
       items = items.filter(item => (item.view || 'AYXC').includes(currentUser));
     }
 
-    statsText.innerHTML = `<span class="stats-count">${items.length}</span> tâche${items.length !== 1 ? 's' : ''}`;
 
     if (items.length === 0) {
       container.innerHTML = `
@@ -1610,15 +1614,8 @@
         </div>
         <button class="delete-btn" onclick="deleteTask('${item.id}')" title="Supprimer">✕</button>
       `;
-      // Long press (mobile) + double-clic (desktop)
-      let pressTimer = null;
-      div.addEventListener('touchstart', () => {
-        pressTimer = setTimeout(() => openTaskDetail(item), 600);
-      }, { passive: true });
-      div.addEventListener('touchend',  () => clearTimeout(pressTimer));
-      div.addEventListener('touchmove', () => clearTimeout(pressTimer));
       div.addEventListener('contextmenu', e => e.preventDefault());
-      div.addEventListener('dblclick', () => openTaskEdit(item));
+      div.addEventListener('dblclick', (e) => { e.preventDefault(); window.getSelection()?.removeAllRanges(); openTaskEdit(item); });
 
       list.appendChild(div);
     });
@@ -1805,13 +1802,6 @@
         <input type="checkbox" class="agenda-checkbox" ${item.done ? 'checked' : ''} onchange="toggleAgendaDone('${item.id}', ${item.done})">
         <button class="delete-btn" onclick="deleteAgenda('${item.id}')" title="Supprimer">✕</button>
       `;
-      // Long press → pie (droits de visu)
-      let agendaPressTimer = null;
-      div.addEventListener('touchstart', () => {
-        agendaPressTimer = setTimeout(() => openAgendaEdit(item), 600);
-      }, { passive: true });
-      div.addEventListener('touchend',  () => clearTimeout(agendaPressTimer));
-      div.addEventListener('touchmove', () => clearTimeout(agendaPressTimer));
       div.addEventListener('contextmenu', e => { e.preventDefault(); openAgendaEdit(item); });
       div.addEventListener('dblclick', (e) => { e.preventDefault(); window.getSelection()?.removeAllRanges(); openAgendaEdit(item); });
 
@@ -1874,7 +1864,11 @@
     pjInput.value = '';
     if (colName === 'agenda' && item.attachmentUrl) {
       pjStatus.style.display = 'block';
-      pjStatus.innerHTML = `📎 <a href="${item.attachmentUrl}" target="_blank" rel="noopener" style="color:var(--accent)">${item.attachmentName || 'Pièce jointe'}</a>`;
+      if (item.attachmentUrl.startsWith('data:image')) {
+        pjStatus.innerHTML = `<img src="${item.attachmentUrl}" onclick="openPjPreview('${item.attachmentUrl}')" style="max-width:100%;max-height:120px;border-radius:6px;cursor:pointer;display:block;margin-top:4px" title="Cliquer pour agrandir">`;
+      } else {
+        pjStatus.innerHTML = `📎 <a href="${item.attachmentUrl}" target="_blank" rel="noopener" style="color:var(--accent)">${item.attachmentName || 'Pièce jointe'}</a>`;
+      }
     } else {
       pjStatus.style.display = 'none';
       pjStatus.textContent = '';
@@ -1986,8 +1980,37 @@
     updatePieColors();
   };
 
-  window.triggerPjPicker = function() {
+  window.togglePjMenu = function() {
+    const menu = document.getElementById('taskEditPjMenu');
+    menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+  };
+
+  window.pjFromFile = function() {
+    document.getElementById('taskEditPjMenu').style.display = 'none';
     document.getElementById('taskEditPjInput').click();
+  };
+
+  window.pjFromClipboard = async function() {
+    document.getElementById('taskEditPjMenu').style.display = 'none';
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        for (const type of item.types) {
+          if (type.startsWith('image/')) {
+            const blob = await item.getType(type);
+            pastedPjFile = new File([blob], 'image-colle.png', { type });
+            document.getElementById('taskEditPjBtn').classList.add('has-file');
+            const pjStatus = document.getElementById('taskEditPjStatus');
+            pjStatus.style.display = 'block';
+            pjStatus.textContent = '📋 Image collée ✓';
+            return;
+          }
+        }
+      }
+      showToast('Aucune image dans le presse-papier');
+    } catch(e) {
+      showToast('Accès presse-papier refusé');
+    }
   };
   document.getElementById('taskEditPjInput').addEventListener('change', function() {
     const file = this.files[0];
@@ -2042,18 +2065,21 @@
     }
     const pjFile = pastedPjFile || document.getElementById('taskEditPjInput').files[0];
     if (pjFile && editingColName === 'agenda') {
-      if (!storage) {
-        showToast('Firebase Storage non activé dans ce projet');
-        return;
-      }
-      try {
-        const sRef = storageRef(storage, `pj/agenda/${editingItemId}/${pjFile.name}`);
-        await uploadBytes(sRef, pjFile);
-        update.attachmentUrl  = await getDownloadURL(sRef);
+      if (pjFile.type.startsWith('image/')) {
+        update.attachmentUrl  = await resizeImage(pjFile);
         update.attachmentName = pjFile.name;
-      } catch(e) {
-        console.error('PJ upload error:', e);
-        showToast('Erreur PJ : ' + (e.code || e.message));
+      } else if (storage) {
+        try {
+          const sRef = storageRef(storage, `pj/agenda/${editingItemId}/${pjFile.name}`);
+          await uploadBytes(sRef, pjFile);
+          update.attachmentUrl  = await getDownloadURL(sRef);
+          update.attachmentName = pjFile.name;
+        } catch(e) {
+          showToast('Erreur PJ : ' + (e.code || e.message));
+          return;
+        }
+      } else {
+        showToast('Fichiers non-image non supportés sans Firebase Storage');
         return;
       }
     }
@@ -2064,6 +2090,7 @@
 
   window.closeTaskEdit = function() {
     document.getElementById('taskEditOverlay').style.display = 'none';
+    document.getElementById('taskEditPjMenu').style.display = 'none';
     editingTaskId = null;
     pastedPjFile  = null;
   };

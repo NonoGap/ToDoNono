@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command \"\\(Get-Content 'c:\\\\Users\\\\cbous\\\\Documents\\\\TotoNono\\\\ToDoNono\\\\index.html' | Select-String -Pattern 'id=\"\"toast\"\"'\\).LineNumber\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\cbous\\\\Documents\\\\TotoNono\\\\ToDoNono\" -Recurse -Include *.js)",
+      "Bash(Select-Object FullName)"
+    ]
+  }
+}

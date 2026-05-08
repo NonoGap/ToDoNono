@@ -1,0 +1,71 @@
+RÈGLES DE VISIBILITÉ — ToDoNono
+================================
+
+UTILISATEURS
+------------
+A, Y, X, C
+
+
+══════════════════════════════
+RÈGLES COMMUNES (tâches + agenda)
+══════════════════════════════
+
+RÈGLE 1 — Vue par défaut à la création
+---------------------------------------
+- Entrée créée par C ou X  →  visible uniquement par C et X (vue "XC")
+- Entrée créée par A ou Y  →  visible par tous (vue "AYXC")
+
+RÈGLE 2 — Le créateur ne peut pas se retirer de la visibilité
+--------------------------------------------------------------
+Dans le popup d'édition, le pie chart permet de gérer qui peut voir
+l'entrée. Le créateur ne peut jamais se désactiver lui-même :
+son segment du pie reste toujours actif.
+
+RÈGLE 3 — Filtrage de l'affichage
+-----------------------------------
+Chaque utilisateur ne voit que les entrées dont la vue contient
+sa lettre. Une entrée sans champ "view" est considérée comme "AYXC".
+
+
+══════════════════════════════
+RÈGLES SPÉCIFIQUES — AGENDA
+══════════════════════════════
+
+RÈGLE 4 — Fenêtre temporelle par défaut
+-----------------------------------------
+La fenêtre d'affichage dépend du jour courant :
+- Lundi à jeudi  →  J à J+6
+- Vendredi       →  J au dimanche de la semaine suivante (J+9)
+- Samedi         →  J au dimanche de la semaine suivante (J+8)
+- Dimanche       →  J au dimanche suivant (J+7)
+
+Un bouton "Voir tout" permet d'afficher également les événements
+passés et ceux au-delà de la fenêtre.
+
+RÈGLE 5 — Tri
+--------------
+Les événements sont triés par date croissante, puis par heure
+croissante pour les événements du même jour.
+
+RÈGLE 6 — Statut "fait"
+------------------------
+Un événement peut être coché comme fait (checkbox).
+Il reste visible mais apparaît avec opacité réduite et texte barré.
+
+RÈGLE 7 — Marquage "important"
+--------------------------------
+Un événement peut être marqué "!" important à la création.
+Le marqueur rouge "!" s'affiche devant le libellé.
+
+RÈGLE 8 — Catégories
+----------------------
+Deux catégories disponibles, avec code couleur :
+- Enfants  →  bleu  (#00aaff)
+- Famille  →  orange (#ff6600)
+
+RÈGLE 9 — Accès au popup de visibilité (agenda)
+-------------------------------------------------
+- Sur mobile  : appui long (600 ms) sur l'événement
+- Sur desktop : double-clic ouvre le popup détail ;
+                le popup de visibilité (pie) s'ouvre via double-clic
+                depuis le popup d'édition

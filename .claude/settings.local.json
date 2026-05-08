@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/cbous/Documents/TotoNono/Madrid/**)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\cbous\\Documents\\TotoNono\\Madrid"
+    ]
+  }
+}

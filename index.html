@@ -1187,7 +1187,7 @@
   </div>
 
   <div id="tab-agenda" class="tab-content" style="display:none">
-    <div class="form-toggle-row"><button class="form-toggle-btn" data-label="＋ Nouvel événement" onclick="toggleForm('form-agenda', this)">＋ Nouvel événement</button></div>
+    <div class="form-toggle-row"><button class="form-toggle-btn" data-label="＋ Ajouter" onclick="toggleForm('form-agenda', this)">＋ Ajouter</button></div>
     <div class="agenda-legend">
       <span><span class="legend-dot" style="background:#29b6f6"></span>Travel</span>
       <span><span class="legend-dot" style="background:#ab47bc"></span>Loisir</span>
@@ -1311,20 +1311,6 @@
 
 <!-- Auth logic -->
 <script>
-  // Mots de passe par user — pour encoder : btoa('motdepasse')
-  const PASSWORDS = {
-    A: 'Q2xpY2h5',
-    Y: 'U2VzYW1l',
-    X: 'TW91Y2hvdHRl',
-    C: 'S2FvbGlu',
-  };
-  const HINTS = {
-    A: 'Ville de Nemea (Maj)',
-    Y: 'Concours (Maj)',
-    X: '',
-    C: 'N° de rue',
-  };
-
   let selectedUser = null;
 
   function selectUser(letter) {
@@ -1332,11 +1318,6 @@
     document.querySelectorAll('.user-btn').forEach(btn => {
       btn.classList.toggle('selected', btn.textContent === letter);
     });
-    const hintEl = document.getElementById('authHint');
-    const hintTrigger = document.getElementById('authHintTrigger');
-    const hint = HINTS[letter] || '';
-    if (hintEl) { hintEl.textContent = hint; hintEl.style.display = 'none'; }
-    if (hintTrigger) hintTrigger.style.display = hint ? 'inline' : 'none';
     const usernameEl = document.getElementById('authUsername');
     if (usernameEl) usernameEl.value = letter;
     document.getElementById('authInput').focus();
@@ -1349,32 +1330,15 @@
       setTimeout(() => err.textContent = '', 2000);
       return;
     }
-    const input = document.getElementById('authInput').value;
-    if (btoa(input) === PASSWORDS[selectedUser]) {
-      const expiry = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 jours
-      localStorage.setItem('auth_expiry', expiry);
-      localStorage.setItem('auth_user', selectedUser);
-      localStorage.setItem('preferredUser', selectedUser);
-      unlock();
-    } else {
-      err.textContent = 'Mot de passe incorrect.';
-      setTimeout(() => err.textContent = '', 2000);
-      document.getElementById('authInput').value = '';
-      document.getElementById('authInput').focus();
+    const password = document.getElementById('authInput').value;
+    if (!password) return;
+    if (window.firebaseLogin) {
+      window.firebaseLogin(selectedUser, password);
     }
   }
 
-  function unlock() {
-    document.getElementById('authScreen').style.display = 'none';
-    document.getElementById('appContent').style.display = 'block';
-    const user = localStorage.getItem('auth_user') || 'A';
-    document.querySelector('.app-initial').textContent = user;
-  }
-
   function logout() {
-    localStorage.removeItem('auth_expiry');
-    localStorage.removeItem('auth_user');
-    location.reload();
+    if (window.firebaseLogout) window.firebaseLogout();
   }
 
   document.getElementById('authInput').addEventListener('keydown', e => {
@@ -1383,9 +1347,6 @@
 
   const saved = localStorage.getItem('preferredUser');
   if (saved) selectUser(saved);
-
-  const authExpiry = localStorage.getItem('auth_expiry');
-  if (authExpiry && Date.now() < parseInt(authExpiry)) unlock();
 
   // Météo Paris via Open-Meteo
   (async () => {
@@ -1477,6 +1438,8 @@
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
   import { getStorage, ref as storageRef, uploadBytes, getDownloadURL }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
   // ─── 🔧 CONFIGURATION FIREBASE ───────────────────────────────────────────
   // Remplace ces valeurs par celles de ta console Firebase
@@ -1496,11 +1459,58 @@
     document.getElementById('config-warn').style.display = 'block';
   }
 
-  const app = initializeApp(firebaseConfig);
-  const db  = getFirestore(app);
+  const app  = initializeApp(firebaseConfig);
+  const db   = getFirestore(app);
+  const auth = getAuth(app);
   let storage = null;
   try { storage = getStorage(app); } catch(e) { console.warn('Firebase Storage non dispo:', e.message); }
   const col = collection(db, "todos");
+
+  // ─── 🔧 EMAILS UTILISATEURS ──────────────────────────────────────────────
+  const USERS_EMAILS = { A: 'a@nono.fr', Y: 'y@nono.fr', X: 'x@nono.fr', C: 'c@nono.fr' };
+  // ─────────────────────────────────────────────────────────────────────────
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      const letter = user.email.split('@')[0].toUpperCase();
+      localStorage.setItem('auth_user', letter);
+      localStorage.setItem('preferredUser', letter);
+      document.getElementById('authScreen').style.display = 'none';
+      document.getElementById('appContent').style.display = 'block';
+      document.querySelector('.app-initial').textContent = letter;
+      startListeners();
+    } else {
+      document.getElementById('authScreen').style.display = 'flex';
+      document.getElementById('appContent').style.display = 'none';
+      localStorage.removeItem('auth_user');
+    }
+  });
+
+  window.firebaseLogin = async function(letter, password) {
+    const email = USERS_EMAILS[letter];
+    const err = document.getElementById('authError');
+    const btn = document.querySelector('.auth-btn');
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch(e) {
+      let msg = 'Mot de passe incorrect.';
+      if (e.code === 'auth/too-many-requests') msg = 'Trop de tentatives, réessaie plus tard.';
+      err.textContent = msg;
+      setTimeout(() => err.textContent = '', 3000);
+      document.getElementById('authInput').value = '';
+      document.getElementById('authInput').focus();
+      btn.disabled = false;
+      btn.textContent = 'Entrer';
+    }
+  };
+
+  window.firebaseLogout = async function() {
+    await signOut(auth);
+    localStorage.removeItem('auth_user');
+    location.reload();
+  };
 
   // ── State ──────────────────────────────────────────────────────────────
   let selectedImp = 3;
@@ -1575,17 +1585,42 @@
     await updateDoc(doc(db, 'todos', id), { importance: val });
   };
 
-  // ── Realtime listener ────────────────────────────────────────────────────
-  const q = query(col, orderBy('createdAt', 'desc'));
-  onSnapshot(q, (snapshot) => {
-    const items = [];
-    snapshot.forEach(d => items.push({ id: d.id, ...d.data() }));
-    items.sort((a, b) => (b.importance || 0) - (a.importance || 0));
-    renderList(items);
-  }, (err) => {
-    document.getElementById('listContainer').innerHTML =
-      `<div class="config-warn">Erreur Firestore : ${err.message}<br>Vérifie ta configuration et les règles de sécurité Firestore.</div>`;
-  });
+  // ── Realtime listeners (démarrés après auth) ─────────────────────────────
+  let _listenersStarted = false;
+  function startListeners() {
+    if (_listenersStarted) return;
+    _listenersStarted = true;
+
+    const q = query(col, orderBy('createdAt', 'desc'));
+    onSnapshot(q, (snapshot) => {
+      const items = [];
+      snapshot.forEach(d => items.push({ id: d.id, ...d.data() }));
+      items.sort((a, b) => (b.importance || 0) - (a.importance || 0));
+      renderList(items);
+    }, (err) => {
+      document.getElementById('listContainer').innerHTML =
+        `<div class="config-warn">Erreur Firestore : ${err.message}</div>`;
+    });
+
+    const aq = query(agendaCol, orderBy('date', 'asc'));
+    onSnapshot(aq, (snapshot) => {
+      agendaItems = [];
+      snapshot.forEach(d => agendaItems.push({ id: d.id, ...d.data() }));
+      agendaItems.sort((a, b) => {
+        if (a.date !== b.date) return a.date > b.date ? 1 : -1;
+        return (a.time || '') > (b.time || '') ? 1 : -1;
+      });
+      renderAgendaList(agendaItems);
+    });
+
+    const rq = query(regalerCol, orderBy('createdAt', 'desc'));
+    onSnapshot(rq, (snapshot) => {
+      regalerItems = [];
+      snapshot.forEach(d => regalerItems.push({ id: d.id, ...d.data() }));
+      regalerItems.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+      renderRegalerList(regalerItems);
+    });
+  }
 
   // ── Render list ──────────────────────────────────────────────────────────
   function renderList(items) {
@@ -1732,7 +1767,7 @@
       document.getElementById('agendaTime').value    = '';
       document.getElementById('agendaAddress').value = '';
       const formAgenda = document.getElementById('form-agenda');
-      const toggleBtn  = document.querySelector('[data-label="＋ Nouvel événement"]');
+      const toggleBtn  = document.querySelector('[data-label="＋ Ajouter"]');
       formAgenda.style.display = 'none';
       if (toggleBtn) toggleBtn.textContent = toggleBtn.dataset.label;
       showToast('Événement ajouté ✓');
@@ -1757,16 +1792,6 @@
     renderAgendaList(agendaItems);
   };
 
-  const aq = query(agendaCol, orderBy('date', 'asc'));
-  onSnapshot(aq, (snapshot) => {
-    agendaItems = [];
-    snapshot.forEach(d => agendaItems.push({ id: d.id, ...d.data() }));
-    agendaItems.sort((a, b) => {
-      if (a.date !== b.date) return a.date > b.date ? 1 : -1;
-      return (a.time || '') > (b.time || '') ? 1 : -1;
-    });
-    renderAgendaList(agendaItems);
-  });
 
   function renderAgendaList(items) {
     const currentUser = localStorage.getItem('auth_user') || '';
@@ -1817,7 +1842,7 @@
       const isDistant = item.date < todayStr || item.date > maxDateStr;
       const monthStr  = isDistant && dateObj ? dateObj.toLocaleDateString('fr-FR', { month: 'short' }) : '';
       div.innerHTML = `
-        <div class="agenda-day" style="color:${color}"><span style="display:block;font-size:11px;font-weight:600;color:#90e080;letter-spacing:0.05em;margin-bottom:3px">${dayAbbr}</span><span style="${item.date === todayStr ? 'color:#ffa726;font-weight:800' : ''}">${dayNum}</span>${monthStr ? `<span style="display:block;font-size:9px;font-weight:400;opacity:0.7">(${monthStr})</span>` : ''}</div>
+        <div class="agenda-day"><span style="display:block;font-size:11px;font-weight:600;color:#90e080;letter-spacing:0.05em;margin-bottom:3px">${dayAbbr}</span><span style="${item.date === todayStr ? 'background:var(--accent);color:var(--bg);border-radius:4px;padding:0 4px;font-weight:800' : 'color:var(--text)'}">${dayNum}</span>${monthStr ? `<span style="display:block;font-size:9px;font-weight:400;opacity:0.7">(${monthStr})</span>` : ''}</div>
         <div style="flex:1; min-width:0">
           <div class="agenda-label">${item.important ? '<span class="agenda-important">!</span>' : ''}${escHtml(item.label)}</div>
           ${item.address ? `<a href="https://maps.google.com?q=${encodeURIComponent(item.address)}" target="_blank" rel="noopener" style="font-size:10px;color:var(--muted);text-decoration:none;display:block;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(item.address)}">📍 ${escHtml(item.address.split(',')[0])}</a>` : ''}
@@ -2345,13 +2370,6 @@
 
   let regalerItems = [];
 
-  const rq = query(regalerCol, orderBy('createdAt', 'desc'));
-  onSnapshot(rq, (snapshot) => {
-    regalerItems = [];
-    snapshot.forEach(d => regalerItems.push({ id: d.id, ...d.data() }));
-    regalerItems.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
-    renderRegalerList(regalerItems);
-  });
 
   function renderRegalerList(items) {
     const container = document.getElementById('regalerList');
@@ -2457,7 +2475,6 @@
       <span style="color:var(--accent);font-size:16px;line-height:1">✦</span>
       <span style="flex:1;display:flex;align-items:baseline;gap:8px">
         <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;letter-spacing:0.02em"><span style="color:var(--accent)">Nono</span></span>
-        <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted)">basé sur le modèle llama-3.3-70b-versatile</span>
       </span>
       <button class="gemini-close" onclick="closeGeminiChat()">✕</button>
     </div>
@@ -2483,7 +2500,7 @@
     history = [];
     document.getElementById('geminiMessages').innerHTML = '';
     document.getElementById('geminiOverlay').style.display = 'flex';
-    appendMsg('assistant', 'Bonjour je suis Nono ton assistant pour t\'aider à réfléchir, dis-moi ce que tu recherches');
+    appendMsg('assistant', 'Bonjour je suis Nono ton assistant pour t\'aider à réfléchir');
     setTimeout(() => document.getElementById('geminiInput').focus(), 150);
   };
 

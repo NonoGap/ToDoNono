@@ -15,3 +15,7 @@ Basé sur Groq API (llama-3.3-70b-versatile). Clé stockée dans GROQ_API_KEY da
 
 **Why:** L'utilisateur veut se souvenir que "Nono" désigne le chatbot, pas juste un nom.
 **How to apply:** Quand l'utilisateur parle de "Nono", il parle du chatbot IA de l'app.
+
+**Déploiement :** GitHub Pages (repo public, NonoGap/ToDoNono). Ne pas utiliser Vercel pour cette app.
+**Why:** L'utilisateur préfère éviter Vercel pour ToDoNono.
+**How to apply:** Pour toute suggestion de déploiement, recommander GitHub Pages ou Firebase Hosting.

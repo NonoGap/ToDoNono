@@ -3,7 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TodoList</title>
+  <title>ToDoNono</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#c8f060">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ToDoNono">
+  <link rel="apple-touch-icon" href="/icon.svg">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><ellipse cx='50' cy='58' rx='36' ry='34' fill='%2376C442'/><path d='M50 24 Q54 13 63 16' stroke='%235D4037' stroke-width='5' fill='none' stroke-linecap='round'/><ellipse cx='62' cy='18' rx='12' ry='6' fill='%2390D74A' transform='rotate(-30 62 18)'/><ellipse cx='36' cy='44' rx='9' ry='6' fill='white' opacity='0.35' transform='rotate(-20 36 44)'/><circle cx='40' cy='56' r='8' fill='white'/><circle cx='60' cy='56' r='8' fill='white'/><circle cx='42' cy='58' r='4.5' fill='%231B5E20'/><circle cx='62' cy='58' r='4.5' fill='%231B5E20'/><circle cx='43' cy='56' r='1.8' fill='white'/><circle cx='63' cy='56' r='1.8' fill='white'/><path d='M33 71 Q50 86 67 71' stroke='%231B5E20' stroke-width='4' fill='none' stroke-linecap='round'/><circle cx='31' cy='68' r='7' fill='%23FF6B6B' opacity='0.3'/><circle cx='69' cy='68' r='7' fill='%23FF6B6B' opacity='0.3'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1347,6 +1353,10 @@
 
   const saved = localStorage.getItem('preferredUser');
   if (saved) selectUser(saved);
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/ToDoNono/sw.js').catch(() => {});
+  }
 
   // Météo Paris via Open-Meteo
   (async () => {

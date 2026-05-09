@@ -1296,7 +1296,7 @@
         <text id="pie-label-C" x="139" y="61"  class="pie-label" onclick="toggleAssignee('C')">C</text>
       </svg>
     </div>
-    <input type="file" id="taskEditPjInput" style="display:none" accept="image/*">
+    <input type="file" id="taskEditPjInput" style="display:none" accept="image/*,application/pdf">
     <div id="taskEditPjStatus" style="display:none;font-size:11px;padding:3px 0 1px;"></div>
     <div id="taskEditPjStatus2" style="display:none;font-size:11px;padding:3px 0 1px;"></div>
     <div id="taskEditPjConfirm" style="display:none;flex-direction:column;gap:6px;">
@@ -2218,6 +2218,9 @@
       let url = null, name = pjFile.name;
       if (pjFile.type.startsWith('image/')) {
         url = await resizeImage(pjFile, 600, 0.65);
+      } else if (pjFile.type === 'application/pdf') {
+        if (pjFile.size > 700 * 1024) { showToast('PDF trop volumineux (max 700 Ko)'); return; }
+        url = await new Promise((res, rej) => { const r = new FileReader(); r.onload = e => res(e.target.result); r.onerror = rej; r.readAsDataURL(pjFile); });
       }
       if (url) {
         if (!_editingItem?.attachmentUrl) {
@@ -2237,21 +2240,30 @@
   window.openPjPreview = function(url, onDelete) {
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px';
-    overlay.innerHTML = `
-      <img src="${url}" style="max-width:95vw;max-height:80vh;border-radius:8px;object-fit:contain;cursor:zoom-out">
-      <div style="display:flex;gap:12px">
-        ${onDelete ? `<button style="background:#ff4f4f22;border:1px solid #ff4f4f66;border-radius:8px;padding:10px 20px;color:#ff8080;font-family:'Syne',sans-serif;font-size:13px;cursor:pointer">✕ Supprimer</button>` : ''}
-        <button style="background:var(--accent);border:none;border-radius:8px;padding:10px 20px;color:var(--bg);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer">Fermer</button>
-      </div>`;
-    overlay.querySelector('img').onclick = () => overlay.remove();
-    overlay.querySelectorAll('button').forEach((btn, i) => {
-      btn.onclick = () => {
-        if (i === 0 && onDelete) {
-          if (confirm('Supprimer cette pièce jointe ?')) { overlay.remove(); onDelete(); }
-        } else {
-          overlay.remove();
-        }
-      };
+    const isPdf = url.startsWith('data:application/pdf') || url.toLowerCase().endsWith('.pdf');
+    overlay.innerHTML = isPdf
+      ? `<embed src="${url}" type="application/pdf" style="width:90vw;height:75vh;border-radius:8px;background:#fff">
+         <div style="display:flex;gap:12px">
+           <button id="_pjOpen" style="background:var(--accent);border:none;border-radius:8px;padding:10px 20px;color:var(--bg);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer">Ouvrir ↗</button>
+           ${onDelete ? `<button style="background:#ff4f4f22;border:1px solid #ff4f4f66;border-radius:8px;padding:10px 20px;color:#ff8080;font-family:'Syne',sans-serif;font-size:13px;cursor:pointer">✕ Supprimer</button>` : ''}
+           <button style="background:none;border:1px solid var(--border);border-radius:8px;padding:10px 20px;color:var(--text);font-family:'Syne',sans-serif;font-size:13px;cursor:pointer">Fermer</button>
+         </div>`
+      : `<img src="${url}" style="max-width:95vw;max-height:80vh;border-radius:8px;object-fit:contain;cursor:zoom-out">
+         <div style="display:flex;gap:12px">
+           ${onDelete ? `<button style="background:#ff4f4f22;border:1px solid #ff4f4f66;border-radius:8px;padding:10px 20px;color:#ff8080;font-family:'Syne',sans-serif;font-size:13px;cursor:pointer">✕ Supprimer</button>` : ''}
+           <button style="background:var(--accent);border:none;border-radius:8px;padding:10px 20px;color:var(--bg);font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer">Fermer</button>
+         </div>`;
+    if (isPdf) {
+      overlay.querySelector('#_pjOpen').onclick = () => window.open(url, '_blank');
+    } else {
+      overlay.querySelector('img').onclick = () => overlay.remove();
+    }
+    overlay.querySelectorAll('button:not(#_pjOpen)').forEach(btn => {
+      if (btn.textContent.trim().startsWith('✕')) {
+        btn.onclick = () => { if (confirm('Supprimer cette pièce jointe ?')) { overlay.remove(); onDelete(); } };
+      } else {
+        btn.onclick = () => overlay.remove();
+      }
     });
     document.body.appendChild(overlay);
   };
